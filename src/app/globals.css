@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+:root {
+  --ba-yellow: #fdda24;
+  --ba-yellow-deep: #ffd200;
+  --ba-black: #2c2a29;
+  --ba-ink: #1a1b1a;
+  --ba-muted: #555555;
+  --ba-line: #e6e6e6;
+  --ba-surface: #f4f4f4;
+  --ba-purple: #6b4fa0;
+  --ba-blue: #57cbe6;
+  --background: #ffffff;
+  --foreground: #1a1b1a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ba-yellow: var(--ba-yellow);
+  --color-ba-yellow-deep: var(--ba-yellow-deep);
+  --color-ba-black: var(--ba-black);
+  --color-ba-ink: var(--ba-ink);
+  --color-ba-muted: var(--ba-muted);
+  --color-ba-line: var(--ba-line);
+  --color-ba-surface: var(--ba-surface);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), "Open Sans", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--ba-yellow);
+  color: var(--ba-ink);
+}
+
+.ba-container {
+  width: 100%;
+  max-width: 1140px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.btn-ba-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #fdda24;
+  color: #1a1b1a;
+  font-weight: 700;
+  padding: 10px 28px;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn-ba-primary:hover {
+  background: #ffd200;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 6%), 0 3px 8px rgb(0 0 0 / 6%);
+}
+
+.btn-ba-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid #1a1b1a;
+  background: transparent;
+  color: #1a1b1a;
+  font-weight: 700;
+  padding: 8px 22px;
+  font-size: 13px;
+  text-transform: uppercase;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.btn-ba-outline:hover {
+  background: #1a1b1a;
+  color: #fff;
+}
+
+/* Oculta la burbuja roja N / Issue del modo desarrollo (Next.js) */
+nextjs-portal,
+[data-nextjs-toast],
+[data-nextjs-dialog-overlay],
+[data-next-badge-root] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Alerta token FLO0001W — mismas clases que e-banca / gredesemo */
+.message.state- {
+  display: flex;
+  width: 100%;
+  margin: 0;
+  background: #fff;
+}
+
+.message.state- .icon-light {
+  width: 50px;
+  min-height: 50px;
+  flex-shrink: 0;
+  background-color: #59cbe8;
+  background-image: url("/images/login/icon-light.svg");
+  background-repeat: no-repeat;
+  background-position: 50%;
+  background-size: 20px 30px;
+}
+
+.message.state- .icon- {
+  border: none;
+  margin: 0;
+  font-family: "Open Sans", var(--font-body), sans-serif;
+  font-weight: 600;
+}
+
+.light-round-image {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background-color: #59cbe8;
+  background-image: url("/images/login/icon-light.svg");
+  background-repeat: no-repeat;
+  background-position: 50%;
+  background-size: 14px 21px;
+}
+
+/* Tejuino / C.interna — fondo a viewport completo + blur */
+.tejuino-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: #f4f4f4;
+}
+
+.tejuino-bg {
+  position: absolute;
+  inset: -20px;
+  width: calc(100% + 40px);
+  height: calc(100% + 40px);
+  background-color: #f4f4f4;
+  background-image: url("/images/login/tejuino-bg.png");
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% 100%;
+  /* Fondo borroso (no se lee), como gredesemo */
+  filter: blur(5px);
+  transform: scale(1.02);
+  pointer-events: none;
+}
+
+.tejuino-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 1.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.tejuino-modal {
+  border-radius: 5px;
+  box-shadow: 0 10px 16px rgba(0, 0, 0, 0.19);
+  margin: auto;
+}
+
+.tejuino-modal .message.state- {
+  background: #fff;
+  align-items: stretch;
+}
+
+.tejuino-modal .message.state- .icon- {
+  background: #fff;
+}
+
+/* Tejuino en celular */
+@media (max-width: 640px) {
+  .tejuino-overlay {
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+  }
+
+  .tejuino-modal {
+    width: 100%;
+    max-width: none;
+    min-height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+    padding:
+      calc(2.75rem + env(safe-area-inset-top, 0))
+      1.15rem
+      calc(1.25rem + env(safe-area-inset-bottom, 0)) !important;
+  }
+
+  .tejuino-modal input {
+    font-size: 16px; /* evita zoom iOS */
+  }
+
+  .tejuino-actions {
+    flex-direction: column-reverse;
+    gap: 0.65rem;
+  }
+
+  .tejuino-actions button {
+    width: 100%;
+    min-height: 48px;
+    flex: none;
+  }
+}
+

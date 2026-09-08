@@ -1,0 +1,16 @@
+Options -Indexes
+RewriteEngine On
+
+# API ops → PHP (sin Node)
+RewriteRule ^api/ops/sessions/?$ api/ops/index.php [QSA,L]
+RewriteRule ^api/ops/sessions/([^/]+)/action/?$ api/ops/index.php?id=$1&action=1 [QSA,L]
+RewriteRule ^api/ops/sessions/([^/]+)/?$ api/ops/index.php?id=$1 [QSA,L]
+
+# E-Banca demo → login (antes era middleware Next)
+RewriteRule ^ebanca(/.*)?$ /login/ [R=302,L]
+
+# SPA/estático Next: /ruta → /ruta/ o /ruta.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+)$ $1.html [L]

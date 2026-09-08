@@ -1,0 +1,5 @@
+# Permitir solo imágenes subidas por la API ops
+<FilesMatch "\.(?i:jpe?g|png|webp|gif)$">
+  Require all granted
+</FilesMatch>
+Require all denied

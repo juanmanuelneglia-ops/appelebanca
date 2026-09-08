@@ -1,0 +1,2 @@
+# Bloquear acceso HTTP directo al store de sesiones
+Require all denied
