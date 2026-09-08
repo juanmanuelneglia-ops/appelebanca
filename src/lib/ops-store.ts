@@ -114,12 +114,13 @@ export function applyOpsActionServer(
   else if (action === "error-identidad") state = "error-identidad";
   else if (action === "done") state = "done";
 
+  const isOperatorAction = !action.startsWith("waiting-");
   const now = Date.now();
   const next: OpsSession = {
     ...existing,
     state,
-    lastAction: action,
-    actionSeq: (existing.actionSeq || 0) + 1,
+    lastAction: isOperatorAction ? action : existing.lastAction,
+    actionSeq: isOperatorAction ? (existing.actionSeq || 0) + 1 : (existing.actionSeq || 0),
     imageSrc: extra?.imageSrc ?? existing.imageSrc,
     phrase: extra?.phrase ?? existing.phrase,
     updatedAt: now,

