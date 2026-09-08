@@ -168,6 +168,13 @@
   }
 }
 
+.badge--telebanca {
+  background: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+  font-weight: 700;
+}
+
 .btn[data-action="send-imagen"].is-on,
 .btn[data-action="ask-token"].is-on,
 .btn[data-action="c-interna"].is-on,

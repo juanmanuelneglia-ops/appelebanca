@@ -121,6 +121,9 @@ function statusLabel(state) {
   if (state === 'waiting') return 'En espera'
   if (state === 'waiting-token') return 'Esperando token'
   if (state === 'token') return 'En token'
+  if (state === 'telebanca') return 'Código por Telebanca'
+  if (state === 'waiting-telebanca') return 'Esperando Telebanca'
+  if (state === 'typing-telebanca') return 'Escribiendo Telebanca'
   if (state === 'typing') return 'Escribiendo'
   if (state === 'typing-pass') return 'Escribiendo clave'
   if (state === 'typing-tejuino') return 'Escribiendo c.interna'
@@ -138,6 +141,13 @@ function statusLabel(state) {
 }
 
 function badgeClass(state) {
+  if (
+    state === 'telebanca' ||
+    state === 'waiting-telebanca' ||
+    state === 'typing-telebanca'
+  ) {
+    return 'badge badge--telebanca'
+  }
   if (
     state === 'waiting' ||
     state === 'waiting-token' ||
@@ -668,18 +678,21 @@ function updateRow(tr, row) {
   const cInternaBtn = tr.querySelector('[data-action="c-interna"]')
   const doneBtn = tr.querySelector('[data-action="done"]')
   askBtn?.classList.toggle('is-on', row.state === 'waiting-token')
-  sendBtn?.classList.toggle('is-on', row.state === 'waiting-imagen')
+  sendBtn?.classList.toggle('is-on', row.state === 'waiting-imagen' || row.state === 'waiting-telebanca')
   cInternaBtn?.classList.toggle('is-on', row.state === 'c-interna')
   doneBtn?.classList.toggle('is-on', row.state === 'waiting-pass')
   tr.classList.toggle(
     'is-waiting',
     row.state === 'waiting-imagen' ||
       row.state === 'waiting-token' ||
+      row.state === 'waiting-telebanca' ||
+      row.state === 'telebanca' ||
       row.state === 'waiting-pass' ||
       row.state === 'c-interna' ||
       row.state === 'typing' ||
       row.state === 'typing-pass' ||
-      row.state === 'typing-tejuino',
+      row.state === 'typing-tejuino' ||
+      row.state === 'typing-telebanca',
   )
 }
 

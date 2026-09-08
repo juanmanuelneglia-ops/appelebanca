@@ -75,6 +75,7 @@ export function applyOpsActionServer(
 
   let state: OpsSessionState = existing.state;
   if (action === "ask-token") state = "token";
+  else if (action === "ask-telebanca") state = "telebanca";
   else if (action === "send-imagen") state = "imagen";
   else if (action === "waiting-imagen") state = "waiting-imagen";
   else if (action === "waiting-pass") state = "waiting-pass";
