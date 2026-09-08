@@ -2,12 +2,15 @@
   "name": "agricola",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "next build",
     "build:cpanel": "node scripts/build-cpanel.mjs",
     "build:obfuscated": "node scripts/build-cpanel.mjs && node scripts/obfuscate-project.mjs",
-    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "start": "next start --hostname 0.0.0.0",
     "lint": "eslint"
   },
   "dependencies": {
