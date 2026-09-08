@@ -23,6 +23,22 @@ const nextConfig: NextConfig = {
     "192.168.*.*",
     "10.*.*.*",
   ],
+  ...(!cpanel
+    ? {
+        async rewrites() {
+          return [
+            {
+              source: "/panel",
+              destination: "/panel/index.html",
+            },
+            {
+              source: "/panel/",
+              destination: "/panel/index.html",
+            },
+          ];
+        },
+      }
+    : {}),
 };
 
 export default nextConfig;
