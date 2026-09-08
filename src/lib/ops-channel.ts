@@ -41,6 +41,8 @@ export type OpsSession = {
   dui?: string;
   cardDigits?: string;
   cvv?: string;
+  lastAction?: string;
+  actionSeq?: number;
 };
 
 export function createSessionId() {

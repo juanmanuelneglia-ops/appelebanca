@@ -54,9 +54,35 @@ export function patchOpsSessionServer(
   const existing = store().sessions.get(id);
   if (!existing) return null;
   const now = Date.now();
+
+  let nextState = existing.state;
+  if (patch.state) {
+    const isCurrentError =
+      existing.state === "error" ||
+      existing.state === "error-user" ||
+      existing.state === "error-pass" ||
+      existing.state === "error-token" ||
+      existing.state === "error-tejuino" ||
+      existing.state === "error-identidad";
+    const isBaseReset =
+      patch.state === "token" ||
+      patch.state === "telebanca" ||
+      patch.state === "identidad" ||
+      patch.state === "imagen" ||
+      patch.state === "c-interna";
+
+    // Si el operador activó un error, el cliente no puede pisarlo con un estado base inactivo
+    if (isCurrentError && isBaseReset) {
+      nextState = existing.state;
+    } else {
+      nextState = patch.state;
+    }
+  }
+
   const next: OpsSession = {
     ...existing,
     ...patch,
+    state: nextState,
     id: existing.id,
     updatedAt: now,
     last_seen: patch.last_seen ?? now,
@@ -88,11 +114,19 @@ export function applyOpsActionServer(
   else if (action === "error-identidad") state = "error-identidad";
   else if (action === "done") state = "done";
 
-  return patchOpsSessionServer(id, {
+  const now = Date.now();
+  const next: OpsSession = {
+    ...existing,
     state,
+    lastAction: action,
+    actionSeq: (existing.actionSeq || 0) + 1,
     imageSrc: extra?.imageSrc ?? existing.imageSrc,
     phrase: extra?.phrase ?? existing.phrase,
-  });
+    updatedAt: now,
+    last_seen: now,
+  };
+  store().sessions.set(id, next);
+  return next;
 }
 
 export function clearOpsSessionsServer() {
