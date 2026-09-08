@@ -776,7 +776,7 @@ export default function LoginPage() {
                 ) : null}
 
                 <div className="mt-6 flex items-center gap-4 sm:mt-8 sm:gap-5">
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-[#ddd] grayscale sm:h-[88px] sm:w-[88px]">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-[#ddd] sm:h-[88px] sm:w-[88px]">
                     <Image
                       src={challenge.imageSrc}
                       alt="Imagen de seguridad"
